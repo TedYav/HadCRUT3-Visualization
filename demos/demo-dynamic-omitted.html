@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>Yo Mama's Favorite Map</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.20.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.20.0/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+    </style>
+</head>
+<body>
+
+<div id='map'></div>
+<script>
+mapboxgl.accessToken = 'pk.eyJ1IjoidGVvbWFuZGF2aWQiLCJhIjoiY2lwaHBrNnp4MDE2Z3RsbmpxeWVkbXhxMSJ9.rhKrjQ0Eb8iH0inNPQ7W8Q';
+var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/teomandavid/cipqcetby005hbdnodgsrj7f4',
+    zoom: 2,
+    minZoom: 2,
+    maxZoom: 6,
+    center: [5.425411010332567, 51.22556912180988]
+});
+
+var pointLayer = {
+        'id': 'temperature',
+        'type': 'circle',
+        'source': 'temperature',
+        'source-layer': 'climate-omitted',
+        'paint': {
+            // make circles larger as the user zooms from z12 to z22
+            'circle-radius': {
+                //'base': 500,
+                'stops': [[2, 60], [6, 150]]
+            },
+            // color circles by ethnicity, using data-driven styles
+            'circle-color': {
+                property: "0",
+                type: 'exponential',    
+                stops: [
+                    [-20, '#0000ff'], 
+                    [50 , '#ff0000']
+                ]
+            },
+            'circle-opacity': {
+                property: "0",
+                type: 'interval',
+                stops: [
+                    [-99, 0.0],
+                    [-50, 0.05]
+                ]
+            },
+            'circle-blur': 1
+        }
+    };
+
+var overlayLayer = {
+    'id': 'overlay',
+    'source': 'overlay',
+    'source-layer': 'admin',
+    'type': 'line'
+};
+
+var index = 0
+function iterate(){
+    if(index == 1000){
+        index = 0;
+    }else{
+        index+= 12;
+    }
+    update(index);
+}
+
+function update(index){
+    map.setPaintProperty("temperature", "circle-color", {
+        property: "" + index,
+            type: 'exponential',    
+            stops: [
+                    [-20, "#0000ff"], 
+                    [50 , "#ff0000"]
+            ]
+    });
+
+    map.setPaintProperty("temperature", "circle-opacity", {
+                property: "" + index,
+                type: 'interval',
+                stops: [
+                    [-99, 0.0],
+                    [-50, 0.8]
+                ]
+    }); 
+}
+
+map.on('load', function () {
+    map.addSource('temperature', {
+        type: 'vector',
+        url: 'mapbox://teomandavid.bcezsd7p'
+    });
+    map.addSource('overlay', {
+        type: 'vector',
+        url: 'mapbox://mapbox.mapbox-streets-v7'
+    });
+    map.addLayer(pointLayer);
+    map.addLayer(overlayLayer);
+    setInterval(iterate, 1000);
+});
+
+</script>
+
+</body>
+</html>
