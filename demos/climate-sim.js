@@ -1,36 +1,12 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset='utf-8' />
-    <title>HadCRUT3 Climate Data</title>
-    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
-    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.20.0/mapbox-gl.js'></script>
-    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.20.0/mapbox-gl.css' rel='stylesheet' />
-    <style>
-        body { margin:0; padding:0; }
-        #map { position:absolute; top:0; bottom:0; width:100%; }
-
-      .mapboxgl-popup {
-          max-width: 400px;
-          font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
-      }
-
-      .marker-title {
-          font-weight: 700;
-      }
-    </style>
-</head>
-<body>
-
-<div id='map'></div>
-<script>
-
 var temperatureData = function(){
     var startYear = 1910;
     var endYear = 2010;
     var yearsPerLayer = 10;   // how many years of data each temperature layer contains
     var indicesPerLayer = yearsPerLayer * 12;
     var map;
+
+    // holds extra handlers so this can be DOM agnostic
+    var handlers = []
 
     var layers = {};
     var layerIDs = {
@@ -65,7 +41,6 @@ var temperatureData = function(){
     function generateLayers(){
         for(var year = startYear; year < endYear; year += yearsPerLayer){
             // add layers as sources
-            console.log("ADDING LAYER " + getLayerName(year));
             map.addSource(getLayerName(year), {
                 type: 'vector',
                 url: 'mapbox://' + layerIDs[year]
@@ -94,7 +69,7 @@ var temperatureData = function(){
                                 [50 , '#ff0000']
                             ]
                         },
-                        'circle-opacity': 0.05,
+                        'circle-opacity': 0.125,
                         'circle-blur': 1
                     }
                 };
@@ -126,12 +101,12 @@ var temperatureData = function(){
           }
           map.addLayer(layers[getBaseYear(currentYear)], 'overlay');
           layerToRemove = getLayerName(prevYear);
-          setTimeout(function(){map.removeLayer(layerToRemove);}, 1000);
+          setTimeout(function(){map.removeLayer(layerToRemove);}, 100);
         }
     }
 
     function updateMap(){
-        console.log("UPDATING: " + currentIndex + " YEAR " + currentYear);
+        // console.log("UPDATING: " + currentIndex + " YEAR " + currentYear);
         if(invalidIndex()){
           updateLayer();
         }
@@ -152,22 +127,30 @@ var temperatureData = function(){
       prevYear = currentYear;
       currentYear = year;
       updateMap();
+      changed();
     }
 
     function updateMonth(month){
       currentMonth = month;
       updateMap();
+      changed();
+    }
+
+    function changed(){
+      handlers.forEach(function(handler){
+        handler();
+      });
     }
 
     return {
       init: function(newMap, startYear){
           map = newMap;
           generateLayers();
-          console.log("GENERATED");
           currentYear = startYear;
           prevYear = startYear;
           map.addLayer(layers[getBaseYear(currentYear)], 'overlay');
           updateMap();
+          changed();
       },
       setYear: function(year){
           updateYear(year);
@@ -182,19 +165,26 @@ var temperatureData = function(){
           else{
             updateYear(startYear);
           }
+      },
+      getYearRange : function(){
+        return [startYear, endYear];
+      },
+      getCurrentYear : function(){
+        return currentYear;
+      },
+      getCurrentMonth : function(){
+        return currentMonth;
+      },
+      onChange : function(handler){
+        handlers.push(handler);
       }
     }
 }();
 
 mapboxgl.accessToken = 'pk.eyJ1IjoidGVvbWFuZGF2aWQiLCJhIjoiY2lwaHBrNnp4MDE2Z3RsbmpxeWVkbXhxMSJ9.rhKrjQ0Eb8iH0inNPQ7W8Q';
-var map = new mapboxgl.Map({
-    container: 'map',
-    style: 'mapbox://styles/mapbox/light-v9',
-    zoom: 2,
-    minZoom: 2,
-    maxZoom: 6,
-    center: [5.425411010332567, 51.22556912180988]
-});
+
+
+
 
 var waterLayer = {
     'id': 'water',
@@ -231,24 +221,72 @@ var infoLayer = {
     }
 }
 
-map.on('load', function () {
-    map.addSource('overlay', {
-        type: 'vector',
-        url: 'mapbox://mapbox.mapbox-streets-v7'
-    });
-    map.addSource('headers', {
-        type: 'vector',
-        url: 'mapbox://teomandavid.2sbag4dt'
-    })
-    map.addLayer(waterLayer);
-    //map.addLayer(tempLayer);
-    map.addLayer(overlayLayer);
-    //map.addLayer(infoLayer);
-    temperatureData.init(map, 2000);
-    setInterval(temperatureData.iterate, 250);
+$(document).ready(function(){
+  var map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/light-v9',
+      zoom: 2,
+      minZoom: 2,
+      maxZoom: 6,
+      center: [5.425411010332567, 51.22556912180988]
+  });
+
+  map.on('load', function () {
+      map.addSource('overlay', {
+          type: 'vector',
+          url: 'mapbox://mapbox.mapbox-streets-v7'
+      });
+      map.addSource('headers', {
+          type: 'vector',
+          url: 'mapbox://teomandavid.2sbag4dt'
+      })
+      map.addLayer(waterLayer);
+      //map.addLayer(tempLayer);
+      map.addLayer(overlayLayer);
+      //map.addLayer(infoLayer);
+      temperatureData.init(map, 2000);
+      //setInterval(temperatureData.iterate, 250);
+  });
+
+  console.log()
+  // register update function w/tempdata
+  $('#map-controls').slider({
+    animate: 'fast',
+    max: temperatureData.getYearRange()[1] - 1,
+    min: temperatureData.getYearRange()[0],
+    value: temperatureData.getCurrentYear(),
+    slide: function(event, ui){
+      $('#map-data').text("Year: " + ui.value);
+    },
+    stop: function(event, ui){
+      temperatureData.setYear(ui.value);
+    }
+  });
+
+  temperatureData.onChange(function(){
+    $('#map-data').text("Year: " + temperatureData.getCurrentYear());
+
+
+    $('#map-controls').slider("option", "value", temperatureData.getCurrentYear());
+  });
+
+  var buttonHandler = function(){
+      var playing = false;
+      var intervalID;
+      return function(){
+          if(playing){
+            $('#playpause').text("Play! :-)");
+            window.clearInterval(intervalID);
+            playing = false;
+          }
+          else{
+            intervalID = window.setInterval(temperatureData.iterate, 250);
+            $('#playpause').text("Stop! :-(");
+            playing = true;
+          }
+      }
+  }();
+
+  $('#playpause').on('click', buttonHandler);
+
 });
-
-</script>
-
-</body>
-</html>
