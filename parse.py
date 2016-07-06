@@ -8,7 +8,7 @@
 import os, re, sys, time, geojson, argparse, subprocess
 
 ##### CONSTANTS -- move to init() func
-START_YEAR = 1990 		# year to start ouputting data
+START_YEAR = 1900 		# year to start ouputting data
 END_YEAR = 2010			# year to end data output
 
 VERBOSE = False			# print extra info to command line
@@ -20,9 +20,10 @@ OUTFILE = "climate" 	# will append .json and times if needed
 PRETTY_PRINT = True		# pretty print output
 
 LIMIT = 25000			# maximum # of stations to parse (>6000 == all of them)
-SPLIT_OUTPUT = True		# output to single file or individual files by years
+SPLIT_OUTPUT = False		# output to single file or individual files by years
 SPLIT_PERIOD = 10		# number of years per split
 SPLIT_HEADERS = True	# separate headers from main file data
+SPLIT_LAYERS = True		# separate output into different layers by starting year for data
 
 AVERAGE_TEMPS = True	# averages missing data points
 
@@ -68,14 +69,34 @@ def init():
 #		Arguments: 		None
 #		Description: 	Calls other parsing functions
 def parseData():
-	yearRange = range(END_YEAR, START_YEAR, (SPLIT_PERIOD) * -1) if SPLIT_OUTPUT else [None]
+	yearRange = range(END_YEAR, START_YEAR, (SPLIT_PERIOD) * -1) if (SPLIT_OUTPUT or SPLIT_LAYERS) else [None]
 	stations = parseFiles()
+
+	features = []
 	for year in yearRange:
 		period = [year - SPLIT_PERIOD, year] if year else None
 		print("Converting interval " + str(period) + " to GEOJson")
-		stationsToGeojson(stations, period)
+		features.extend(stationsToFeatures(stations, period));
+		if(SPLIT_OUTPUT):
+			outputJson(features, generateSuffix(period))
+			features = []
+
+	# if we've been accumulating the output to this point
+	if(len(features) > 0):
+		outputJson(features, generateSuffix())
+
 	if(SPLIT_HEADERS):
-		stationsToGeojson(stations, None, True)
+		features = stationsToFeatures(stations, None, True)
+		outputJson(features, generateSuffix(headersOnly = True))
+
+def generateSuffix(period = None, headersOnly = False):
+	if(period):
+		suffix = str(period[0])
+		if(period[0] != period[1]):
+			suffix = suffix + "-" + str(period[1])
+	else:
+		suffix = "headers" if headersOnly else ""
+	return suffix
 
 def parseFiles():
 	filenames = getAllFilenames()
@@ -164,6 +185,23 @@ def parseTemp(line):
 def ifelse(ddict, key, default):
 	return ddict[key] if key in ddict.keys() else default
 
+def interpolate(temps, index):
+	# verifies that the indices separated by rng are valid
+	def valid(rng):
+		return index - rng > 0 and \
+			   index + rng < len(temps) and \
+			   temps[index - rng] != -99 and \
+			   temps[index + rng] != -99
+	def avg(rng):
+		return round((temps[index - rng] + temps[index + rng]) / 2, 1)
+
+	# average first by surrounding months
+	# if not possible, average by last year's reading and next year's
+	if(valid(1) or valid(12)):
+		return avg(1) if valid(1) else avg(12)
+	else:
+		return -99
+
 def stationToGeojson(station, period, headersOnly = False):
 	# negative Longitude in data is East, in MapBox it's West
 	point = geojson.Point((-1 * station['Long'],station['Lat']))
@@ -185,6 +223,8 @@ def generateProperties(station, period, headersOnly = False):
 	if(headersOnly):
 		return properties
 
+	properties['start'] = period[0]
+
 	# set start and end points to go through temperatures array
 	start = ((period[0] - START_YEAR)*12) if period else 0
 	end = ((period[1] - START_YEAR)*12) if period else len(station['temperatures'])
@@ -196,6 +236,7 @@ def generateProperties(station, period, headersOnly = False):
 		if(station['temperatures'][i] == -99):
 			if(AVERAGE_TEMPS):
 				station['temperatures'][i] = interpolate(station['temperatures'], i)
+
 			# check if we were able to interpolate
 			if(station['temperatures'][i] == -99):
 				if(missing < MAX_MISSING):
@@ -207,40 +248,20 @@ def generateProperties(station, period, headersOnly = False):
 		properties[tempstr] = station['temperatures'][i]
 	return properties
 
-def interpolate(temps, index):
-	# verifies that the indices separated by rng are valid
-	def valid(rng):
-		return index - rng > 0 and \
-			   index + rng < len(temps) and \
-			   temps[index - rng] != -99 and \
-			   temps[index + rng] != -99
-	def avg(rng):
-		return round((temps[index - rng] + temps[index + rng]) / 2, 1)
-
-	# average first by surrounding months
-	# if not possible, average by last year's reading and next year's
-	if(valid(1) or valid(12)):
-		return avg(1) if valid(1) else avg(12)
-	else:
-		return -99
-
-def stationsToGeojson(stations, period = None, headersOnly = False):
+def stationsToFeatures(stations, period = None, headersOnly = False):
 	features = []
 	for station in stations:
 		geoStation = stationToGeojson(station, period, headersOnly)
 		# do not append if None returned (missing data point)
 		if(geoStation):
 			features.append(geoStation)
-	if(period):
-		suffix = str(period[0])
-		if(period[0] != period[1]):
-			suffix = suffix + "-" + str(period[1])
-	else:
-		suffix = "headers" if headersOnly else ""
-	outputJson(geojson.FeatureCollection(features), suffix)
+	return features
 
-def outputJson(geoData, suffix = ""):
+def outputJson(features, suffix = ""):
 	print("OUTPUTING JSON DATA")
+
+	geoData = geojson.FeatureCollection(features);
+
 	filename = OUTPATH + OUTFILE + str(suffix) + ".json"
 	os.makedirs(os.path.dirname(filename), exist_ok = True)
 
