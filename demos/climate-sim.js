@@ -1,139 +1,115 @@
-var temperatureData = function(){
-    var startYear = 1910;
+var map;  // to avoid declaration problems below
+
+/*
+/   climateData: closure holding styling info and managing transitions
+*/
+var climateData = function(){
+
+    /*
+    /
+    /   Variables -- configured according to map data
+    /
+    */
+
+
+    const months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+
+    var myMap;
+
+    var startYear = 1900;
     var endYear = 2010;
-    var yearsPerLayer = 10;   // how many years of data each temperature layer contains
-    var indicesPerLayer = yearsPerLayer * 12;
-    var map;
+    var currentYear = 2000;
+    var currentMonth = months[0];
+    var currentIndex = currentYear - startYear;
+    var currentStyle = 'solid';
 
     // holds extra handlers so this can be DOM agnostic
-    var handlers = []
-
-    var layers = {};
-    var layerIDs = {
-        2000 : 'teomandavid.avnfqc1r',
-        1990 : 'teomandavid.2q15bd1p',
-        1980 : 'teomandavid.dwjd1l7o',
-        1970 : 'teomandavid.99nzb97y',
-        1960 : 'teomandavid.cx64qvfm',
-        1950 : 'teomandavid.bm4fjc6s',
-        1940 : 'teomandavid.14p7nv2b',
-        1930 : 'teomandavid.2al32fa3',
-        1920 : 'teomandavid.642l79dx',
-        1910 : 'teomandavid.2nbuz6i3'
-    }
+    var handlers = [];
 
     var loop = false;
 
-    var prevYear = 2000;
-    var currentYear = 2000;
-    var currentMonth = 0;
-    var currentIndex = 0;
-
-    function getBaseYear(year){
-        return year - (year%yearsPerLayer);
-    }
-    function getLayerName(year){
-        var start = getBaseYear(year);
-        var end = start + yearsPerLayer;
-        return "climate" + start + "-" + end;
+    // function to set coloration style for layers
+    var colorStyle = function(prop, range){
+      return {
+          property: "" + prop,
+          type: 'exponential',
+          stops: [
+              [range[0], '#0000ff'],
+              [range[1] , '#ff0000']
+          ]
+      };
     }
 
-    function generateLayers(){
-        for(var year = startYear; year < endYear; year += yearsPerLayer){
-            // add layers as sources
-            map.addSource(getLayerName(year), {
-                type: 'vector',
-                url: 'mapbox://' + layerIDs[year]
-            });
+    // range which we're going to color temperatures
+    var tempRange = [-20, 50];
 
-            // generate layer objects for quick access
-            // they are all single layer vector sets
-            // so we don't need to worry about separate layer names and ids etc
-            layers[year] = {
-                    'id': getLayerName(year),
-                    'type': 'circle',
-                    'source': getLayerName(year),
-                    'source-layer': getLayerName(year),
-                    'paint': {
-                        'circle-radius': {
-                            //'base': 500,
-                            'type': 'exponential',
-                            'stops': [[2, 60], [6, 600]]
-                        },
-                        // color circles by ethnicity, using data-driven styles
-                        'circle-color': {
-                            property: "0",
-                            type: 'exponential',
-                            stops: [
-                                [-20, '#0000ff'],
-                                [50 , '#ff0000']
-                            ]
-                        },
-                        'circle-opacity': 0.125,
-                        'circle-blur': 1
-                    }
-                };
-        }
-    }
-
-    function invalidIndex(){
-      return currentIndex + currentMonth >= indicesPerLayer || currentIndex + currentMonth < 0;
-    }
-
-    function updateLayer(){
-        // if it's an invalid year, just snap to the end
-        if(currentYear > endYear){
-          currentYear = endYear;
-          currentIndex = (yearsPerLayer - 1) * 12;
-        }else if(currentYear < startYear){
-          currentYear = startYear;
-          currentIndex = 0;
-        }
-        // otherwise change the layer
-        else{
-          reload = true;
-          // only one of these loops will run
-          while(currentIndex >= indicesPerLayer){
-            currentIndex -= indicesPerLayer;
-          }
-          while(currentIndex < 0){
-            currentIndex += indicesPerLayer;
-          }
-          map.addLayer(layers[getBaseYear(currentYear)], 'overlay');
-          layerToRemove = getLayerName(prevYear);
-          setTimeout(function(){map.removeLayer(layerToRemove);}, 100);
-        }
-    }
+    // styles to display the map
+    var circleStyles = {
+      heatmap : function(prop){
+        return{
+              'circle-radius' : {
+                  'type': 'exponential',
+                  'stops': [[2, 60], [6, 600]]
+              },
+              'circle-color': colorStyle(prop, tempRange),
+              'circle-opacity': {
+                  'property' : "" + prop,
+                  'type': 'exponential',
+                  'stops': [[-99, 0.0], [-50, 0.125]]
+              },
+              'circle-blur': 1
+          };
+      },
+      solid : function(prop){
+          return{
+              'circle-radius': {
+                    'type': 'exponential',
+                    'stops': [[2, 5], [6, 20]]
+                },
+                'circle-opacity': {
+                    'property' : "" + prop,
+                    'type': 'exponential',
+                    'stops': [[-99, 0.0], [-50, 1.0]]
+                },
+                'circle-color': colorStyle(prop, tempRange)
+            };
+      }
+  }
 
     function updateMap(){
-        // console.log("UPDATING: " + currentIndex + " YEAR " + currentYear);
-        if(invalidIndex()){
-          updateLayer();
-        }
+      var props = ['circle-color', 'circle-opacity'];
+      updateStyle(currentMonth, props);
+      changed();
+    }
 
-        map.setPaintProperty(getLayerName(currentYear), "circle-color", {
-            property: "" + currentIndex,
-                type: 'exponential',
-                stops: [
-                        [-20, "#0000ff"],
-                        [50 , "#ff0000"]
-                ]
+    function updateStyle(layer, props){
+      var style = circleStyles[currentStyle](currentIndex);
+      props.forEach(function(prop){
+        if(prop in style){
+          map.setPaintProperty(currentMonth, prop, style[prop]);
+        }
+      });
+    }
+
+    function loadStyle(){
+        var props = ['circle-color', 'circle-opacity', 'circle-radius', 'circle-blur'];
+        months.forEach(function(month){
+          updateStyle(month, props);
         });
     }
 
     function updateYear(year){
-      offset = year - currentYear;
-      currentIndex += offset * 12;
-      prevYear = currentYear;
       currentYear = year;
+      currentIndex = currentYear - startYear;
       updateMap();
-      changed();
     }
 
     function updateMonth(month){
+      var prevMonth = currentMonth;
       currentMonth = month;
-      updateMap();
-      changed();
+      updateMap();  // want to update the map before we display the data
+      showLayer(currentMonth);
+      hideLayer(prevMonth);
     }
 
     function changed(){
@@ -142,13 +118,22 @@ var temperatureData = function(){
       });
     }
 
+    function hideLayer(month){
+      myMap.setLayoutProperty(month, 'visibility', 'none');
+    }
+
+    function showLayer(month){
+      myMap.setLayoutProperty(month, 'visibility', 'visible');
+    }
+
     return {
-      init: function(newMap, startYear){
-          map = newMap;
-          generateLayers();
-          currentYear = startYear;
-          prevYear = startYear;
-          map.addLayer(layers[getBaseYear(currentYear)], 'overlay');
+      init: function(newMap, year, month, style){
+          myMap = newMap;
+          currentYear = year;
+          currentStyle = style;
+          currentMonth = month;
+          loadStyle();
+          showLayer(currentMonth);
           updateMap();
           changed();
       },
@@ -157,6 +142,11 @@ var temperatureData = function(){
       },
       setMonth: function(month){
           updateMonth(month);
+      },
+      setStyle: function(style){
+          currentStyle = style;
+          loadStyle();
+          updateMap();
       },
       iterate : function(){
           if(currentYear < endYear  - 1){
@@ -175,6 +165,9 @@ var temperatureData = function(){
       getCurrentMonth : function(){
         return currentMonth;
       },
+      getMonths : function(){
+        return months;
+      },
       onChange : function(handler){
         handlers.push(handler);
       }
@@ -183,91 +176,39 @@ var temperatureData = function(){
 
 mapboxgl.accessToken = 'pk.eyJ1IjoidGVvbWFuZGF2aWQiLCJhIjoiY2lwaHBrNnp4MDE2Z3RsbmpxeWVkbXhxMSJ9.rhKrjQ0Eb8iH0inNPQ7W8Q';
 
-
-
-
-var waterLayer = {
-    'id': 'water',
-    'source': 'overlay',
-    'source-layer': 'water',
-    'type': 'fill',
-    'paint' : {
-      'fill-color' : '#7788ff'
-    }
-};
-
-var overlayLayer = {
-    'id': 'overlay',
-    'source': 'overlay',
-    'source-layer': 'admin',
-    'type': 'line'
-};
-
-var infoLayer = {
-    'id' : 'info',
-    'source' : 'headers',
-    'type' : 'circle',
-    'source-layer' : 'climateheaders',
-    // 'minzoom': 3,
-    // 'maxzoom': 10,
-    'paint': {
-        // make circles larger as the user zooms from z12 to z22
-        'circle-radius': {
-          'stops': [[2, 1], [3,5]]
-        },
-        // color circles by ethnicity, using data-driven styles
-        'circle-color': '#000',
-        'circle-opacity': 0.5
-    }
-}
-
 $(document).ready(function(){
-  var map = new mapboxgl.Map({
+  map = new mapboxgl.Map({
       container: 'map',
-      style: 'mapbox://styles/mapbox/light-v9',
+      style: 'mapbox://styles/teomandavid/ciqbmy8mh0001khmcg5jkce1l',
       zoom: 2,
       minZoom: 2,
-      maxZoom: 6,
+      maxZoom: 7,
       center: [5.425411010332567, 51.22556912180988]
   });
 
   map.on('load', function () {
-      map.addSource('overlay', {
-          type: 'vector',
-          url: 'mapbox://mapbox.mapbox-streets-v7'
-      });
-      map.addSource('headers', {
-          type: 'vector',
-          url: 'mapbox://teomandavid.2sbag4dt'
-      })
-      map.addLayer(waterLayer);
-      //map.addLayer(tempLayer);
-      map.addLayer(overlayLayer);
-      //map.addLayer(infoLayer);
-      temperatureData.init(map, 2000);
-      //setInterval(temperatureData.iterate, 250);
+      climateData.init(map, 2000, 'january', 'solid');
   });
 
-  console.log()
   // register update function w/tempdata
   $('#map-controls').slider({
     animate: 'fast',
-    max: temperatureData.getYearRange()[1] - 1,
-    min: temperatureData.getYearRange()[0],
-    value: temperatureData.getCurrentYear(),
+    max: climateData.getYearRange()[1] - 1,
+    min: climateData.getYearRange()[0],
+    value: climateData.getCurrentYear(),
     slide: function(event, ui){
       $('#map-data').text("Year: " + ui.value);
     },
     stop: function(event, ui){
-      temperatureData.setYear(ui.value);
+      climateData.setYear(ui.value);
     }
   });
 
-  temperatureData.onChange(function(){
-    $('#map-data').text("Year: " + temperatureData.getCurrentYear());
+  climateData.onChange(function(){
+    $('#map-data').text("Year: " + climateData.getCurrentYear());
 
 
-    $('#map-controls').slider("option", "value", temperatureData.getCurrentYear());
+    $('#map-controls').slider("option", "value", climateData.getCurrentYear());
   });
 
   var buttonHandler = function(){
@@ -280,7 +221,7 @@ $(document).ready(function(){
             playing = false;
           }
           else{
-            intervalID = window.setInterval(temperatureData.iterate, 250);
+            intervalID = window.setInterval(climateData.iterate, 1000);
             $('#playpause').text("Stop! :-(");
             playing = true;
           }

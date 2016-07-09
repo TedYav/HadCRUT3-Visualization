@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script>
+function colorStyle(prop, range){
+return 0;
+}
+var circleStyles = {
+  heatmap : function(prop){
+    style = {};
+    style['circle-radius'] = {
+        'type': 'exponential',
+        'stops': [[2, 60], [6, 600]]
+    };
+    style['circle-color'] = colorStyle(prop, tempRange)
+    style['circle-opacity'] = {
+        'type': 'exponential',
+        'stops': [[-99, 0.0], [-50, 0.125]]
+    };
+    style['circle-blur'] = 1;
+    return style;
+  },
+  solid : function(prop){
+      return
+        {
+          'circle-radius': {
+                'type': 'exponential',
+                'stops': [[2, 5], [6, 20]]
+            },
+            // eliminates points with missing data
+            'circle-opacity': {
+                'type': 'exponential',
+                'stops': [[-99, 0.0], [-50, 1.0]]
+            }
+            'circle-color': colorStyle(prop, tempRange),
+        };
+  }
+}
+</script>
+<body>
+FUCK
+</body>
+</html>
