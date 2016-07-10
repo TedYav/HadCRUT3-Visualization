@@ -23,13 +23,18 @@
 </main>
 
 <footer>
-<div>
-  <div id="map-controls"></div>
-  <span id="map-data"></span>
+<div id="map-controls">
+    <div id="map-slider"></div>
+    <select id="map-months"></select>
+    <div id="map-data"></div>
+    <select id="map-display"></select>
+    <button id="playpause">Play! :-)</button>
+    Show Temperature Anomaly: <input type="checkbox" id="toggleAnomaly" />
+    Loop: <input type="checkbox" id="toggleLoop" />
 </div>
 <div id="map-buttons">
-  <button id="playpause">Play! :-)</button>
-  -20C <div id="temp-gradient"></div> 50C
+  <div class="gradient"><span>-20C</span><div id="temp-gradient"></div><span>40C</span></div>
+  <div class="gradient"><span>-1C</span><div id="anomaly-gradient"></div><span>1C</span></div>
 </div>
 </footer>
 
