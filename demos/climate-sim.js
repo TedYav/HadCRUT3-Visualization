@@ -1,6 +1,17 @@
 var map;  // to avoid declaration problems below
 
 /*
+
+  FINAL TODO:
+  1. Clean up code and comment
+  2. Remove closure from code --> unnecessary and confusing
+  3. Remove country labels at full zoom
+  4. Clean CSS
+  5. Publishg w/blog post
+
+*/
+
+/*
 /   climateData: closure holding styling info and managing transitions
 */
 var climateData = function(){
@@ -136,10 +147,81 @@ var climateData = function(){
     }
 
     function loadStyle(style = currentStyle){
-        currentStyle = style;
-        months.forEach(function(month){
-          updateStyle(month);
-        });
+      currentStyle = style;
+      months.forEach(function(month){
+        updateStyle(month);
+      });
+    }
+
+    function loadHeaders(){
+      var headerStyle = circleStyles['solid'](0);
+
+      myMap.setPaintProperty('headers', 'circle-radius', headerStyle['circle-radius']);
+      myMap.setPaintProperty('headers', 'circle-opacity', 0);
+
+      myMap.setLayoutProperty('headers', 'visibility', 'visible');
+
+      initPopup();
+    }
+
+    function initPopup(){
+      var popup = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false
+      });
+
+      var active = false;
+      var currentFeature = null;
+
+      function popupHandler(event) {
+        if(currentStyle != 'heatmap'){
+          var features = myMap.queryRenderedFeatures(event.point, {
+              layers: ['headers', currentMonth]
+          });
+
+          if (features.length && features.length > 1) {
+            var result = [];
+            for(i in features){
+              if('name' in features[i].properties){
+                result['name'] = features[i].properties.name;
+                result['coordinates'] = features[i].geometry.coordinates;
+              }
+              if(("" + currentIndex) in features[i].properties){
+                result['temperatures'] = features[i].properties;
+              }
+            }
+
+            if(result['temperatures']["" + currentIndex] != -99){
+              active = true;
+              currentFeature = result;
+              myMap.getCanvas().style.cursor = 'pointer';
+              popup.setLngLat(result['coordinates'])
+                  .addTo(myMap);
+              updatePopup();
+            }
+            else{
+              active = false;
+              return popup.remove();
+            }
+          }
+          else{
+            active = false;
+            return popup.remove();
+          }
+        }else{
+          active = false;
+          return popup.remove();
+        }
+      }
+
+      function updatePopup(){
+        if(active){
+          popup.setHTML(currentFeature['name'] + '<br /> ' + "Temperature: " + currentFeature['temperatures']["" + currentIndex]);
+        }
+      }
+        
+      myMap.on('mousemove', popupHandler);
+      myMap.on('render', updatePopup);
     }
 
     function updateYear(year){
@@ -179,6 +261,7 @@ var climateData = function(){
           currentMonth = month;
           defaultWaterColor = myMap.getPaintProperty('water', 'fill-color');
           loadStyle();
+          loadHeaders();
           showLayer(currentMonth);
           updateMap();
           changed();
@@ -219,6 +302,9 @@ var climateData = function(){
       getStyles : function(){
         return Object.keys(circleStyles);
       },
+      getAnomaly : function(){
+        return tempAnomaly[currentYear];
+      },
       toggleAnomaly : function(){
         showAnomaly = !showAnomaly;
         if(showAnomaly) { 
@@ -244,7 +330,7 @@ $(document).ready(function(){
       style: 'mapbox://styles/teomandavid/ciqgbmop7001bcfnnag7yupxd',
       zoom: 2,
       minZoom: 2,
-      maxZoom: 9,
+      maxZoom: 7,
       center: [5.425411010332567, 51.22556912180988]
   });
 
@@ -259,7 +345,7 @@ $(document).ready(function(){
     min: climateData.getYearRange()[0],
     value: climateData.getCurrentYear(),
     slide: function(event, ui){
-      $('#map-data').text("Year: " + ui.value);
+      $('#year').text("Year: " + ui.value);
     },
     stop: function(event, ui){
       climateData.setYear(ui.value);
@@ -283,8 +369,8 @@ $(document).ready(function(){
   initSelect('#map-display', climateData.getStyles(), climateData.getCurrentStyle(), climateData.setStyle);
 
   climateData.onChange(function(){
-    $('#map-data').text("Year: " + climateData.getCurrentYear());
-
+    $('#year').text("Year: " + climateData.getCurrentYear());
+    $('#anomaly').text("Anomaly: " + climateData.getAnomaly());
     $('#map-slider').slider("option", "value", climateData.getCurrentYear());
   });
 
@@ -306,7 +392,6 @@ $(document).ready(function(){
   }();
 
   $('#playpause').on('click', buttonHandler);
-
   $('#toggleAnomaly').on('change', climateData.toggleAnomaly);
   $('#toggleLoop').on('change', climateData.toggleLoop);
 

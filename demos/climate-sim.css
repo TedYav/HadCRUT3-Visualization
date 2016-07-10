@@ -1,5 +1,6 @@
 body { margin:0; padding:0; }
 #map { position:absolute; top:0; bottom: 70px; width:100%;}
+.mapboxgl-popup-content { pointer-events: none !important; }
 
 footer{
   height: 50px;
@@ -11,10 +12,9 @@ footer{
   padding: 10px;
 }
 
-#map-data{
-  float: right;
+.map-text{
   display: inline-block;
-  width: 100px;
+  width: auto;
   text-align: right;
   font-family: sans-serif;
   font-size: 18px;
@@ -114,4 +114,8 @@ footer{
 
 .marker-title {
   font-weight: 700;
+}
+
+select{
+  margin: 0px 10px;
 }
