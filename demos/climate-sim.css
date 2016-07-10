@@ -22,10 +22,30 @@ footer{
   margin-right: 20px;
 }
 
+#map-controls{
+  display: flex;
+  flex-direction: horizontal;
+}
+
+#map-controls button{
+  margin: 0px 5px 0px 5px;
+}
+
 #map-slider{
-  width: 200px;
-  height: auto;
-  margin: 10px;
+  width: 350px;
+  height: 15px;
+  margin: 2px ;
+  display: inline-block;
+}
+
+#map-months{
+  width: auto;
+  min-width: 50px;
+  margin: 2px;
+  display: inline-block;
+  text-transform: capitalize;
+  font-size: 120%;
+  margin-left: 20px;
 }
 
 #map-buttons{
@@ -40,8 +60,24 @@ footer{
   margin-top: 5px;
 }
 
+.gradient{
+  max-width: 470px;
+  min-width: 200px;
+  display: inline-block;
+  height: 22px;
+  margin-left: 10px;
+  margin-right: 10px;
+}
+
+.gradient span{
+    display: inline-block;
+    vertical-align: top;
+    margin-top: 8px;
+}
+
 #temp-gradient{
-  width: 370px;
+  max-width: 350px;
+  min-width: inherit;
   height: 20px;
   margin: 5px;
   margin-left: 10px;
@@ -53,6 +89,22 @@ footer{
   background: -webkit-linear-gradient(left,  #0000ff 0%,#ff0000 100%); /* Chrome10-25,Safari5.1-6 */
   background: linear-gradient(to right,  #0000ff 0%,#ff0000 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
   filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#0000ff', endColorstr='#ff0000',GradientType=1 ); /* IE6-9 */
+}
+
+#anomaly-gradient{
+  max-width: 350px;
+  min-width: inherit;
+  height: 20px;
+  margin: 5px;
+  margin-left: 10px;
+  border: 1px solid black;
+  display: inline-block;
+  /* Permalink - use to edit and share this gradient: http://colorzilla.com/gradient-editor/#000077+0,ff6100+100 */
+  background: #000077; /* Old browsers */
+  background: -moz-linear-gradient(left,  #000077 0%, #ff6100 100%); /* FF3.6-15 */
+  background: -webkit-linear-gradient(left,  #000077 0%,#ff6100 100%); /* Chrome10-25,Safari5.1-6 */
+  background: linear-gradient(to right,  #000077 0%,#ff6100 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+  filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#000077', endColorstr='#ff6100',GradientType=1 ); /* IE6-9 */
 }
 
 .mapboxgl-popup {
