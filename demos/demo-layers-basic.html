@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>Yo Mama's New Favorite Map</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.20.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.20.0/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+    </style>
+
+    <script   src="https://code.jquery.com/jquery-3.0.0.min.js"   integrity="sha256-JmvOoLtYsmqlsWxa7mDSLMwa6dZ9rrIdtrrVYRnDRH0="   crossorigin="anonymous"></script>
+</head>
+<body>
+<div id='map'></div>
+<div id='map-overlay'></div>
+
+<script src="temp-anomaly.js"></script>
+<script>
+mapboxgl.accessToken = 'pk.eyJ1IjoidGVvbWFuZGF2aWQiLCJhIjoiY2lwaHBrNnp4MDE2Z3RsbmpxeWVkbXhxMSJ9.rhKrjQ0Eb8iH0inNPQ7W8Q';
+var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/teomandavid/ciqbmy8mh0001khmcg5jkce1l',
+    zoom: 2,
+    minZoom: 2,
+    maxZoom: 7,
+    center: [5.425411010332567, 51.22556912180988]
+});
+
+var index = 0;    // 1900
+var currentLayer = "January";
+
+function iterate(){
+    index++;
+    if(index >= 110){
+      index = 0;
+    }
+    updatePaint();
+}
+
+function updatePaint(){
+  map.setPaintProperty(currentLayer, 'circle-color', {
+            property: "" + index,
+            type: 'exponential',
+            stops: [
+                [-20, '#0000ff'],
+                [50 , '#ff0000']
+            ]
+  });
+
+  map.setPaintProperty(currentLayer, 'circle-opacity', {
+            property: "" + index,
+            type: 'exponential',
+            stops: [
+                [-99, 0.0],
+                [-50 , 1.0]
+            ]
+  });
+}
+
+map.on('load', function () {
+
+    map.setPaintProperty(currentLayer, 'circle-radius', {
+      stops: [[2,5],[9,25]]
+    });
+
+    setInterval(iterate, 1000);
+});
+
+</script>
+
+</body>
+</html>

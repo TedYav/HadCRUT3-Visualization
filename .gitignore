@@ -18,7 +18,6 @@
 *.jar
 *.rar
 *.tar
-*.zip
 
 # Logs and databases #
 ######################
@@ -36,15 +35,8 @@
 ehthumbs.db
 Thumbs.db
 
-climate-data/
-json/
 output/
-includes/
-output/
-gitkill.sh
-output/
-output/
-output/
+output-monthly/
 json/
 includes/
 climate-data/
