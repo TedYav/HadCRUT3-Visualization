@@ -69,6 +69,12 @@ footer{
   border-top: 10px solid #080808;
 }
 
+footer div:first-child{
+  min-width: 800px;
+  max-width: 900px;
+  margin: auto;
+}
+
 .map-text{
   display: inline-block;
   width: 80px;
@@ -138,6 +144,14 @@ button{
 .gradient{
   text-align: center;
   font-weight: bold;
+}
+
+#author-info{
+  position: fixed;
+  right: 0px;
+  bottom: 0px;
+  width: 50;
+  height: auto;
 }
 
 #temp-gradient{
