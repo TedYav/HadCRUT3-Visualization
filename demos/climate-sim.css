@@ -1,5 +1,48 @@
-body { margin:0; padding:0; }
-#map { position:absolute; top:0; bottom: 70px; width:100%;}
+/*
+
+  climate-sim.css
+  CSS styles for HADCrut3 Climate Data using MapboxGL.js
+
+  AUTHOR: Teoman (Ted) Yavuzkurt
+  www.github.com/teomandavid
+  www.teomandavid.com
+
+*/
+
+body { 
+  margin:0; 
+  padding:0; 
+}
+
+#map { 
+  position:absolute; 
+  top:0; 
+  bottom: 80px; 
+  width:100%;
+}
+
+.m5{
+  margin: 5px;
+}
+
+.m5-top{
+  margin-top: 5px !important;
+}
+
+.m6-top{
+  margin-top: 6px !important;
+}
+
+.m2{
+  margin: 2px;
+}
+
+
+.mapboxgl-popup {
+  max-width: 400px;
+  font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+}
+
 .mapboxgl-popup-content {
  pointer-events: none !important; 
  text-align: center;
@@ -18,61 +61,66 @@ footer{
   height: 50px;
   width: 100%;
   display: block;
-  background-color: #ccc;
+  background-color: #555;
   position: fixed;
   bottom: 0px;
   padding: 10px;
+  font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+  border-top: 10px solid #080808;
 }
 
 .map-text{
   display: inline-block;
-  width: auto;
-  text-align: right;
-  font-family: sans-serif;
-  font-size: 18px;
-  color: black;
-  margin-right: 20px;
-}
-
-#map-controls{
-  display: flex;
-  flex-direction: horizontal;
-}
-
-#map-controls button{
-  margin: 0px 5px 0px 5px;
-}
-
-#map-slider{
-  width: 350px;
-  height: 15px;
-  margin: 2px ;
-  display: inline-block;
-}
-
-#map-months{
-  width: auto;
-  min-width: 50px;
+  width: 80px;
+  font-size: 150%;
   margin: 2px;
+  margin-top: 3px;
+}
+
+.map-text-title{
+  display: inline-block;
+  width: 80px;
+  font-size: 150%;
+  margin: 2px;
+  font-weight: bold;
+  text-align: right;
+}
+
+.mini{
+  font-size: inherit%;
+  margin-left: 10px;
+  margin-right: 0px;
+  font-weight: bold;
+}
+
+select{
+  margin-left: 5px;
+  margin-right: 5px;
   display: inline-block;
   text-transform: capitalize;
   font-size: 120%;
-  margin-left: 20px;
+  width: auto;
+  min-width: 50px;
 }
 
-#map-buttons{
+.map-controls{
   display: flex;
   flex-direction: row;
 }
 
-#playpause{
+button{
   height: 20px;
   width: 75px;
-  display: inline-block;
-  margin-top: 5px;
 }
 
-.gradient{
+#map-slider{
+  max-width: 450px;
+  min-width: 300px;
+  height: 15px;
+  margin-left: 9px;
+}
+
+.gradient-container{
   max-width: 470px;
   min-width: 200px;
   display: inline-block;
@@ -81,10 +129,15 @@ footer{
   margin-right: 10px;
 }
 
-.gradient span{
+.gradient-container span{
     display: inline-block;
     vertical-align: top;
-    margin-top: 8px;
+    margin-top: 6px;
+}
+
+.gradient{
+  text-align: center;
+  font-weight: bold;
 }
 
 #temp-gradient{
@@ -117,17 +170,4 @@ footer{
   background: -webkit-linear-gradient(left,  #000077 0%,#ff6100 100%); /* Chrome10-25,Safari5.1-6 */
   background: linear-gradient(to right,  #000077 0%,#ff6100 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
   filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#000077', endColorstr='#ff6100',GradientType=1 ); /* IE6-9 */
-}
-
-.mapboxgl-popup {
-  max-width: 400px;
-  font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
-}
-
-.marker-title {
-  font-weight: 700;
-}
-
-select{
-  margin: 0px 10px;
 }
