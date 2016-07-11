@@ -1,10 +1,16 @@
 // climate-sim.js
 // Main Javascript to display HADCrut3 Climate Data using MapboxGL.js
 
+// AUTHOR: Teoman (Ted) Yavuzkurt
+// www.github.com/teomandavid
+// www.teomandavid.com
+
 // Note: 
 // This code has been refactored SIGNIFICANTLY to cut down on the number of functions and closures.
 // This makes it easier to follow the flow of the code and to see the MapBoxGL API in use.
 // However, this is not a very robust way to code (just putting everything in one script)
+// Some "boring" functions (i.e. JQuery DOM, color etc stuff) are minified at the top. Use jsbeautifier.org
+// if you want to see their code nicely.
 
 // API access code to get the custom style for this project
 mapboxgl.accessToken = 'pk.eyJ1IjoidGVvbWFuZGF2aWQiLCJhIjoiY2lwaHBrNnp4MDE2Z3RsbmpxeWVkbXhxMSJ9.rhKrjQ0Eb8iH0inNPQ7W8Q';
@@ -58,12 +64,18 @@ var currentFeature = null;                      // current feature loaded in pop
 
 // ###### HELPER FUNCTIONS #####
 
+// these functions are not terribly interesting as far as MapBoxGL goes, so I've minified their code here
+// if you're curious about some JQuery go to jsbeautifier.org and paste these in
 // converts color array [R,G,B] to string usable by MapBoxGL
 function convertColor(colorArray){ return "rgb(" + colorArray[0] + "," + colorArray[1] + "," + colorArray[2] + ")"; }
 // calculates color along a gradient, returns [R,G,B] array
 function colorFromGradient(percent, gradient){ return gradient[0].map(function(color, index){return Math.round((1-percent)*color + percent*gradient[1][index]);}); }
 // initializes select menus
-function initSelect(id, source, selected, handler){ source.forEach(function(item){ var option = $("<option></option>").attr("value",item).text(item); if(item == selected) {option.attr("selected", "selected");} $(id).append(option); }); $(id).on('change', function(){ handler(this.value); }); };
+function initSelect(id, source, selected, handler){ source.forEach(function(item){ var option = $("<option></option>").attr("value",item).text(item); if(item == selected) {option.attr("selected", "selected");} $(id).append(option); }); $(id).on('change', function(){ handler(this.value); }); }
+// loads temperature scales
+function loadTemperatureScales() {var elements = ['#raw-temp-start', '#raw-temp-end', '#anomaly-start', '#anomaly-end']; var temps = [tempRange[0], tempRange[1], anomalyRange[0], anomalyRange[1]]; elements.forEach(function(ele, index){ $(ele).html(temps[index] + "&deg;C"); }); }
+// toggles animation when button is pushed
+function toggleAnimation(){ if(playing) { $('#playpause').text("Play"); window.clearInterval(intervalID);}else { $('#playpause').text("Stop"); intervalID = window.setInterval(function(){ if(currentYear < dataEndYear - 1){ currentYear++; }else if(loop){ currentYear = dataStartYear;} updateMap(); }, animationSpeed); } playing = !playing;}
 
 // ###### STYLES #####
 
@@ -130,6 +142,20 @@ var headerStyle = {
 
 // ###### DISPLAY FUNCTIONS #####
 
+// updateMap()
+// recalculates currentIndex and updates circle-color and circle-opacity
+// properties on the map. Redraws temperature anomaly if it's displayed.
+function updateMap(){
+  currentIndex = currentYear - dataStartYear;
+  applyStyles([currentMonth], props = ['circle-color', 'circle-opacity']);
+  if(showAnomaly){
+    updateAnomaly();
+  }
+  updateHTML();
+  updatePopup();
+}
+
+
 // updateAnomaly()
 // redraws temperature anomaly data
 // calculates what percentage along the temperature anomaly gradient
@@ -147,15 +173,12 @@ function updateAnomaly(){
   map.setPaintProperty('water', 'fill-color', color);
 }
 
-// updateMap()
-// recalculates currentIndex and updates circle-color and circle-opacity
-// properties on the map. Redraws temperature anomaly if it's displayed.
-function updateMap(){
-  currentIndex = currentYear - dataStartYear;
-  applyStyles([currentMonth], props = ['circle-color', 'circle-opacity']);
-  if(showAnomaly){
-    updateAnomaly();
-  }
+// updateHTML()
+// updates HTML elements to keep pace with map updates
+function updateHTML(){
+  $('#year').text("Year: " + currentYear);
+  $('#anomaly').text("Anomaly: " + tempAnomaly[currentYear]);
+  $('#map-slider').slider("option", "value", currentYear);
 }
 
 // applyStyles(layers, props, style)
@@ -163,6 +186,7 @@ function updateMap(){
 // props  = properties to apply (DEFAULT: all properties specified by style...
                               //... set to null because style not loaded yet)
 // style  = style to apply to layers (DEFAULT: current simulation display style)
+// applies styles to layers automatically to avoid lots of repeated API calls
 function applyStyles(layers = [currentMonth], props = null, style=styles[currentStyle](currentIndex)){
   if(!props){ props = Object.keys(style);}  // get all the properties from the style if we didn't specify which
   layers.forEach(function(layer){
@@ -177,29 +201,48 @@ function applyStyles(layers = [currentMonth], props = null, style=styles[current
 // before the HTML page has completed loading. Otherwise we'll get errors.
 $(document).ready(function(){
   
-  // instantiate the map
+  // instantiate the map with some basic parameters that work well for this data set
   map = new mapboxgl.Map({
       container: 'map',
       style: 'mapbox://styles/teomandavid/ciqgbmop7001bcfnnag7yupxd',
       zoom: 2,
       minZoom: 2,
       maxZoom: 7,
+      dragRotate: false, // don't allow rotation
       center: [5.425411010332567, 51.22556912180988]
   });
 
   // We let the map load, then configure it
   map.on('load', function () {
+
+    // ###### LAYOUT AND DISPLAY ACTIONS ######
+
+    // first we grab and store the current color of the water
+    // using the getPaintProperty function
+    // this will allow us to put it back later if we change it
     defaultWaterColor = map.getPaintProperty('water', 'fill-color');
-    applyStyles();
+
+    // once the map loads, we want to style all the layers
+    // since all temperature layers are named for their months
+    // this will apply the current style to all temperature layers
+    applyStyles(layers = months);
     
-    // note: style this in studio!
+    // we then apply our style to the header layer as well and make it "visible."
+    // we could have done this in studio and programmatically changed it here
+    // to match the 'solid' display style
+    // NOTE: opacity for this is 0 because we don't want it to show -- just interact with mouse
+    // if layer isn't visible it won't interact with mouse
     applyStyles(layers=['headers'], props=['circle-radius', 'circle-opacity'], headerStyle)
     map.setLayoutProperty('headers', 'visibility', 'visible');
     
+    // show the current month
     map.setLayoutProperty(currentMonth, 'visibility', 'visible');
-    updateMap();
 
-    // show page design elements
+    // now let's draw the slider
+    // this JQuery code is uninteresting but I've left it here to show how we update the map
+    // we only change the map on the 'stop' event so that it can scroll smoothly
+    // we don't use the 'change' event because this leads to an infinite loop if the map
+    // updates the slider position (i.e. during iteration)
     $('#map-slider').slider({
       animate: 'fast',
       max: dataEndYear - 1,
@@ -214,36 +257,69 @@ $(document).ready(function(){
       }
     });
 
+    // initSelect function itself is not terribly interesting -- just populates select element
+    // and registers a callback function (code at top if interested).
+    // interesting part here is the callback -- we just swap layer visibility based
+    // on what month is selected. 
+    // We call updateMap() because the new layer is probably out of sync with the current year.
     initSelect('#map-months', months, currentMonth, handler = function(month){
       var prevMonth = currentMonth;
       currentMonth = month;
-      map.setLayoutProperty(prevMonth, 'visibility', 'hidden');
+      map.setLayoutProperty(prevMonth, 'visibility', 'none');
       map.setLayoutProperty(currentMonth, 'visibility', 'visible');
-      applyStyles();
+      updateMap();
     });
 
+    // if we change the style from 'heatmap' to 'solid' or vice versa
+    // we set the current style, then apply it to all layers using applyStyles()
     initSelect('#map-display', Object.keys(styles), currentStyle, handler = function(style){
       currentStyle = style;
       applyStyles(layers = months);
     });
 
-    // set up popup handling
+    // boring JQuery function to display temperature scales
+    // reads tempRange and anomalyRange and outputs HTML
+    loadTemperatureScales();
 
+    // ###### POPUP EVENT HANDLING ######
+
+    // here's a quick function to update the text in our popup
+    // it first checks that the popup is currently visible (popupActive == true)
+    // and then renders the HTML
+    // NOTE: you'd probably want to use a JQuery or other template here,
+    // but that would complicate this example
     function updatePopup(){
       if(popupActive){
-        popup.setHTML(currentFeature['name'] + '<br /> ' + "Temperature: " + currentFeature['temperatures']["" + currentIndex]);
+        popup.setHTML("<h4>" + currentFeature['name'] + '</h4><strong>' + "Temperature: </strong>" + currentFeature['temperatures']["" + currentIndex] + "&deg;C");
       }
     }
 
+    // this function is a little long because there are a lot of cases in which we don't
+    // want to display the popup. If any of these conditions are met we immediately set
+    // popupActive to false (so it won't be updated and we don't waste cycles) and we 
+    // remove the popup from the map.
+
+    // any time the mouse moves over the map, we query features at that point
+    // since the temperature layers do not contain header information, we have to grab
+    // parts of our data from different layers. Thus we loop through all features at a point
+    // and grab the respective information we need. The map SHOULD only trigger features at one
+    // coordinate, thus we don't have to worry about getting the name for one climate station
+    // and the temperature for another
+
+    // finally, when we have the information, we display it
     map.on('mousemove', function(event) {
+      // heatmap is too diffuse to display popups, so we return
       if(currentStyle == 'heatmap') { popupActive = false; return popup.remove(); }
       
+      // query features at the mouse pointer location
       var features = map.queryRenderedFeatures(event.point, {
             layers: ['headers', currentMonth]
       });
 
+      // if we didn't get any features or we only got 1 (i.e. not enough to get our data), return
       if(!features.length || features.length == 1) { popupActive = false; return popup.remove(); }
         
+      // we loop through all the features we found and pull out the info we need
       var result = [];
       for(i in features){
         if('name' in features[i].properties){
@@ -255,46 +331,47 @@ $(document).ready(function(){
         }
       }
 
+      // if the temperature is -99 at this point, it means the station has missing data
+      // so we don't want to display a popup because there will not be a dot on the map. Return.
+      // note again we have to use "" + currentIndex to access our temperature data because
+      // the indices in GEOJSON features are all strings.
       if(result['temperatures']["" + currentIndex] == -99) { popupActive = false; return popup.remove(); }
 
+      // if we've passed all of these checks, we are going to display the popup, so we set it active
       popupActive = true;
+
+      // store the currentFeature so we can update temperature (if map is animated)
+      // without querying again (slow)
       currentFeature = result;
+
+      // change mouse cursor
       map.getCanvas().style.cursor = 'pointer';
+
+      // display the popup
       popup.setLngLat(result['coordinates'])
           .addTo(map);
       updatePopup();
     });
 
-    map.on('render', function(){
-      $('#year').text("Year: " + currentYear);
-      $('#anomaly').text("Anomaly: " + tempAnomaly[currentYear]);
-      $('#map-slider').slider("option", "value", currentYear);
-      updatePopup();
-    });
+    // ###### CONTROL EVENT HANDLING ######
 
-    $('#playpause').on('click', function(){
-      if(playing) { 
-        $('#playpause').text("Play");
-        window.clearInterval(intervalID); 
-      }else {  
-        $('#playpause').text("Stop");
-        intervalID = window.setInterval(function(){
-          if(currentYear < dataEndYear - 1){
-            currentYear++;
-          }else if(loop){
-            currentYear = dataStartYear;
-          }
-          updateMap();
-        }, animationSpeed);
-      }
-      playing = !playing;
-    });
+    // most of this code is just JQuery code to update the display
+    // we toggle the value of playing
+    // and then set an animation interval and text accordingly
+    // we call updateMap after each tick
+    // code not terribly interesting so it's minified at above
+    $('#playpause').on('click', toggleAnimation);
 
+    // when we change the checkbox, toggle showAnomaly, and redraw
     $('#toggleAnomaly').on('change', function(){
       showAnomaly = !showAnomaly;
       updateAnomaly(); 
     });
 
+    // when we change the checkbox, toggle loop
+    // has no immediate effect unless animation is paused on last year
     $('#toggleLoop').on('change', function() { loop = !loop; });
+
+    // and that's it! Not so bad :)
   });
 });

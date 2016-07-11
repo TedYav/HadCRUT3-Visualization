@@ -1,6 +1,18 @@
 body { margin:0; padding:0; }
 #map { position:absolute; top:0; bottom: 70px; width:100%;}
-.mapboxgl-popup-content { pointer-events: none !important; }
+.mapboxgl-popup-content {
+ pointer-events: none !important; 
+ text-align: center;
+ padding: 5px;
+ background-color: #55a;
+ opacity: .75;
+}
+
+.mapboxgl-popup-content h4 {
+  font-size: 120%;
+  font-weight: bold;
+  margin: 0px;
+}
 
 footer{
   height: 50px;
