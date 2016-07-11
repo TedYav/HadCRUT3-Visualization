@@ -1,56 +1,78 @@
+// climate-sim.js
+// Main Javascript to display HADCrut3 Climate Data using MapboxGL.js
 
+// Note: 
+// This code has been refactored SIGNIFICANTLY to cut down on the number of functions and closures.
+// This makes it easier to follow the flow of the code and to see the MapBoxGL API in use.
+// However, this is not a very robust way to code (just putting everything in one script)
 
+// API access code to get the custom style for this project
 mapboxgl.accessToken = 'pk.eyJ1IjoidGVvbWFuZGF2aWQiLCJhIjoiY2lwaHBrNnp4MDE2Z3RsbmpxeWVkbXhxMSJ9.rhKrjQ0Eb8iH0inNPQ7W8Q';
+
+// need to declare this before using it, or JQuery will throw an error
 var map;
 
+// ###### CONSTANTS -- CONFIGURATION ######
+
+// months and Temperature Anomaly data.
 const months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
 const tempAnomaly = {1850:-0.431,1851:-0.020,1852:-0.320,1853:-0.388,1854:0.065,1855:-0.188,1856:-0.352,1857:-0.289,1858:-0.375,1859:-0.363,1860:-0.326,1861:-0.266,1862:-0.591,1863:-0.307,1864:-0.639,1865:-0.306,1866:-0.358,1867:-0.371,1868:-0.291,1869:-0.260,1870:-0.266,1871:-0.413,1872:-0.164,1873:-0.204,1874:-0.343,1875:-0.584,1876:-0.245,1877:-0.040,1878:0.109,1879:-0.409,1880:-0.169,1881:-0.303,1882:-0.138,1883:-0.412,1884:-0.541,1885:-0.500,1886:-0.423,1887:-0.522,1888:-0.488,1889:-0.228,1890:-0.467,1891:-0.599,1892:-0.603,1893:-0.689,1894:-0.551,1895:-0.551,1896:-0.380,1897:-0.301,1898:-0.405,1899:-0.330,1900:-0.176,1901:-0.187,1902:-0.352,1903:-0.435,1904:-0.570,1905:-0.434,1906:-0.224,1907:-0.619,1908:-0.493,1909:-0.471,1910:-0.346,1911:-0.469,1912:-0.392,1913:-0.326,1914:-0.063,1915:-0.082,1916:-0.370,1917:-0.694,1918:-0.489,1919:-0.277,1920:-0.306,1921:-0.168,1922:-0.261,1923:-0.295,1924:-0.370,1925:-0.280,1926:-0.046,1927:-0.231,1928:-0.164,1929:-0.444,1930:-0.137,1931:-0.125,1932:-0.056,1933:-0.296,1934:-0.071,1935:-0.167,1936:-0.111,1937:-0.071,1938:0.109,1939:-0.059,1940:-0.030,1941:-0.013,1942:-0.028,1943:-0.064,1944:0.073,1945:-0.100,1946:-0.078,1947:-0.009,1948:-0.059,1949:-0.150,1950:-0.318,1951:-0.125,1952:-0.037,1953:0.058,1954:-0.186,1955:-0.204,1956:-0.433,1957:-0.052,1958:0.081,1959:-0.011,1960:-0.100,1961:0.040,1962:-0.000,1963:0.007,1964:-0.285,1965:-0.185,1966:-0.116,1967:-0.120,1968:-0.210,1969:-0.059,1970:-0.022,1971:-0.205,1972:-0.176,1973:0.156,1974:-0.306,1975:-0.114,1976:-0.368,1977:0.072,1978:-0.046,1979:0.062,1980:0.141,1981:0.248,1982:0.021,1983:0.320,1984:-0.058,1985:-0.010,1986:0.117,1987:0.290,1988:0.342,1989:0.195,1990:0.428,1991:0.339,1992:0.103,1993:0.183,1994:0.326,1995:0.477,1996:0.215,1997:0.464,1998:0.821,1999:0.493,2000:0.363,2001:0.559,2002:0.666,2003:0.645,2004:0.622,2005:0.760,2006:0.674,2007:0.680,2008:0.527,2009:0.672}; 
 
-const startYear = 1900;
-const endYear = 2010;
-const defaultStyle = 'solid';
-const defaultStartYear = 2000;
-const defaultStartMonth = months[0];
+const dataStartYear = 1900;                     // year the data set starts
+const dataEndYear = 2010;                       // year the data set ends
+const defaultStyle = 'solid';                   // default display mode for the map ('solid' or 'heatmap')
+const defaultStartYear = 2000;                  // year to start the display
+const defaultStartMonth = months[0];            // month to start the display
+const animationSpeed = 1000;                    // how fast to change years in milliseconds
+const tempRange = [-20, 40];                    // temperature range for raw temperatures
+const tempColors = [[0,0,255], [255,0,0]];      // colors for Raw Temperature Gradient (color 1: [Red, Green, Blue] color2: [Red, Green, Blue])
+const anomalyRange = [-1, 1];                   // temperature range for anomaly temperatures
+const anomalyColors = [[0,0,119], [255,97,0]];  // colors for Anomaly Temp Gradient (color 1: [Red, Green, Blue] color2: [Red, Green, Blue]) 
 
-const animationSpeed = 1000;
+// NOTE: if you change the gradient colors here, you'll need to update them in climate-sim.css as well!
 
-const tempRange = [-20, 40];
-const tempColors = [[0,0,255], [255,0,0]];
+// ###### GLOBAL VARIABLES FOR SIMULATION #####
 
-const anomalyRange = [-1, 1];
-const anomalyColors = [[0,0,119], [255,97,0]];
+// simulation state
+var currentYear = defaultStartYear;             // current year for simulation
+var currentMonth = defaultStartMonth;           // current month for simulation
+var currentIndex = currentYear - dataStartYear; // current position in temperatures array (i.e. year offset)
+var currentStyle = defaultStyle;                // current simulation display style ('solid' or 'heatmap')
 
-var defaultWaterColor;  // loaded dynamically
+// display variables
+var defaultWaterColor;                          // default color for water -- loaded dynamically from map on init
+var showAnomaly = false;                        // display anomaly data or not
 
-var currentYear = defaultStartYear;
-var currentMonth = defaultStartMonth;
-var currentIndex = currentYear - startYear;
-var currentStyle = defaultStyle;
+// animation variables
+var intervalID;                                 // JavaScript intervalID for animation, so it can be cancelled
+var playing = false;                            // animation playing or not
+var loop = false;                               // loop animation
 
-// show anomaly data or not
-var showAnomaly = false;
-
-var intervalID;
-var playing = false;
-var loop = false;
-
-var popup = new mapboxgl.Popup({
+// popup variables
+var popup = new mapboxgl.Popup({                // popup object
   closeButton: false,
   closeOnClick: false
 });
-var popupActive = false;
-var currentFeature = null;
+var popupActive = false;                        // TRUE: popup is showing FALSE: popup hidden
+var currentFeature = null;                      // current feature loaded in popup 
 
-function convertColor(colorArray){ 
-  return "rgb(" + colorArray[0] + "," + colorArray[1] + "," + colorArray[2] + ")"; 
-}
-function colorFromGradient(percent, gradient){ 
-  return gradient[0].map(function(color, index){return Math.round((1-percent)*color + percent*gradient[1][index]);});
-}
+// ###### HELPER FUNCTIONS #####
+
+// converts color array [R,G,B] to string usable by MapBoxGL
+function convertColor(colorArray){ return "rgb(" + colorArray[0] + "," + colorArray[1] + "," + colorArray[2] + ")"; }
+// calculates color along a gradient, returns [R,G,B] array
+function colorFromGradient(percent, gradient){ return gradient[0].map(function(color, index){return Math.round((1-percent)*color + percent*gradient[1][index]);}); }
+// initializes select menus
 function initSelect(id, source, selected, handler){ source.forEach(function(item){ var option = $("<option></option>").attr("value",item).text(item); if(item == selected) {option.attr("selected", "selected");} $(id).append(option); }); $(id).on('change', function(){ handler(this.value); }); };
 
-// styles to display the map
-var circleStyles = {
+// ###### STYLES #####
+
+// simulation display styles
+// NOTE: each of these is a function
+// This way we can pass in an argument (prop) which is the name
+// of the property containing the values for the styling.
+// e.g. styles['heatmap'](20);
+var styles = {
   heatmap : function(prop){
     return{
           'circle-radius' : {
@@ -58,7 +80,7 @@ var circleStyles = {
               'stops': [[2, 60], [6, 600]]
           },
           'circle-color': {
-              'property' : "" + prop,
+              'property' : "" + prop,   // we have to do "" + prop to make it a string
               'type' : 'exponential',
               'stops' : [
                 [tempRange[0], convertColor(tempColors[0])],
@@ -97,41 +119,65 @@ var circleStyles = {
     }
 };
 
+// display style for the header layer
+// uses circle-radius style from solid display style
+// opacity set to 0 so we don't actually see it, but we can still
+// interact with it
 var headerStyle = {
-  'circle-radius' : circleStyles['solid'](0)['circle-radius'],
+  'circle-radius' : styles['solid'](0)['circle-radius'],
   'circle-opacity': 0
 };
 
+// ###### DISPLAY FUNCTIONS #####
+
+// updateAnomaly()
+// redraws temperature anomaly data
+// calculates what percentage along the temperature anomaly gradient
+// the current temperature anomaly is. Then converts it to a color
+// and finally renders on the map. If anomaly isn't showing, resets
+// water color to default.
 function updateAnomaly(){
   var color = defaultWaterColor;
   if(showAnomaly){
     var anomaly = tempAnomaly[currentYear];
-    
     var percent = (anomaly - anomalyRange[0])/(anomalyRange[1] - anomalyRange[0]);
     percent = ((percent > 1)? 1 : ((percent < 0)?0 : percent));
-
     color = convertColor(colorFromGradient(percent, anomalyColors));
   }
   map.setPaintProperty('water', 'fill-color', color);
 }
 
+// updateMap()
+// recalculates currentIndex and updates circle-color and circle-opacity
+// properties on the map. Redraws temperature anomaly if it's displayed.
 function updateMap(){
-  currentIndex = currentYear - startYear;
+  currentIndex = currentYear - dataStartYear;
   applyStyles([currentMonth], props = ['circle-color', 'circle-opacity']);
-  updateAnomaly();
+  if(showAnomaly){
+    updateAnomaly();
+  }
 }
 
-function applyStyles(layers = [currentMonth], props = null, style=circleStyles[currentStyle](currentIndex)){
-  if(!props){ props = Object.keys(style);}
-  props.forEach(function(prop){
-    layers.forEach(function(layer){
+// applyStyles(layers, props, style)
+// layers = layers to apply styles to (DEFAULT: current month's temperature)
+// props  = properties to apply (DEFAULT: all properties specified by style...
+                              //... set to null because style not loaded yet)
+// style  = style to apply to layers (DEFAULT: current simulation display style)
+function applyStyles(layers = [currentMonth], props = null, style=styles[currentStyle](currentIndex)){
+  if(!props){ props = Object.keys(style);}  // get all the properties from the style if we didn't specify which
+  layers.forEach(function(layer){
+    props.forEach(function(prop){
+      // set the paint property on each layer
       map.setPaintProperty(layer, prop, style[prop]);
     });
   });
 }
 
+// using $(document).ready() ensures we don't try to render the map
+// before the HTML page has completed loading. Otherwise we'll get errors.
 $(document).ready(function(){
   
+  // instantiate the map
   map = new mapboxgl.Map({
       container: 'map',
       style: 'mapbox://styles/teomandavid/ciqgbmop7001bcfnnag7yupxd',
@@ -141,6 +187,7 @@ $(document).ready(function(){
       center: [5.425411010332567, 51.22556912180988]
   });
 
+  // We let the map load, then configure it
   map.on('load', function () {
     defaultWaterColor = map.getPaintProperty('water', 'fill-color');
     applyStyles();
@@ -155,8 +202,8 @@ $(document).ready(function(){
     // show page design elements
     $('#map-slider').slider({
       animate: 'fast',
-      max: endYear - 1,
-      min: startYear,
+      max: dataEndYear - 1,
+      min: dataStartYear,
       value: currentYear,
       slide: function(event, ui){
         $('#year').text("Year: " + ui.value);
@@ -175,7 +222,7 @@ $(document).ready(function(){
       applyStyles();
     });
 
-    initSelect('#map-display', Object.keys(circleStyles), currentStyle, handler = function(style){
+    initSelect('#map-display', Object.keys(styles), currentStyle, handler = function(style){
       currentStyle = style;
       applyStyles(layers = months);
     });
@@ -232,10 +279,10 @@ $(document).ready(function(){
       }else {  
         $('#playpause').text("Stop");
         intervalID = window.setInterval(function(){
-          if(currentYear < endYear - 1){
+          if(currentYear < dataEndYear - 1){
             currentYear++;
           }else if(loop){
-            currentYear = startYear;
+            currentYear = dataStartYear;
           }
           updateMap();
         }, animationSpeed);
