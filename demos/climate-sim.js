@@ -151,7 +151,7 @@ var headerStyle = {
 // properties on the map. Redraws temperature anomaly if it's displayed.
 function updateMap(){
   currentIndex = currentYear - dataStartYear;
-  applyStyles([currentMonth], props = ['circle-color', 'circle-opacity']);
+  applyStyles([currentMonth],['circle-color', 'circle-opacity']);
   if(showAnomaly){
     updateAnomaly();
   }
@@ -199,13 +199,13 @@ function updateHTML(){
 }
 
 // applyStyles(layers, props, style)
-// layers = layers to apply styles to (DEFAULT: current month's temperature)
-// props  = properties to apply (DEFAULT: all properties specified by style...
-                              //... set to null because style not loaded yet)
-// style  = style to apply to layers (DEFAULT: current simulation display style)
+// layers = layers to apply styles to
+// props  = properties to apply ("all" === all properties)
+// style  = style to apply to layers
 // applies styles to layers automatically to avoid lots of repeated API calls
-function applyStyles(layers = [currentMonth], props = null, style=styles[currentStyle](currentIndex)){
-  if(!props){ props = Object.keys(style);}  // get all the properties from the style if we didn't specify which
+function applyStyles(layers, props, style){
+  if(style == null){ style = styles[currentStyle](currentIndex); }  // bug fix: safari and some browsers don't support default assignment in arguments
+  if(props === "all"){ props = Object.keys(style);}  // get all the properties from the style if we didn't specify which
   layers.forEach(function(layer){
     props.forEach(function(prop){
       // set the paint property on each layer
@@ -241,14 +241,14 @@ $(document).ready(function(){
 
     // once the map loads, we want to style all the layers
     // this will apply the current style to all temperature layers
-    applyStyles(layers = layerNames);
+    applyStyles(layerNames, "all");
     
     // we then apply our style to the header layer as well and make it "visible."
     // we could have done this in studio and programmatically changed it here
     // to match the 'solid' display style
     // NOTE: opacity for this is 0 because we don't want it to show -- just interact with mouse
     // if layer isn't visible it won't interact with mouse
-    applyStyles(layers=['headers'], props=['circle-radius', 'circle-opacity'], headerStyle)
+    applyStyles(['headers'],['circle-radius', 'circle-opacity'], headerStyle)
     map.setLayoutProperty('headers', 'visibility', 'visible');
     
     // show the current month
@@ -295,7 +295,7 @@ $(document).ready(function(){
     // we set the current style, then apply it to all layers using applyStyles()
     initSelect('#map-display', Object.keys(styles), currentStyle, handler = function(style){
       currentStyle = style;
-      applyStyles(layers = layerNames);
+      applyStyles(layerNames, "all");
     });
 
     // boring JQuery function to display temperature scales
