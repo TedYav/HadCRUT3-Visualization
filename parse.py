@@ -1,34 +1,31 @@
 ##### parse.py
-##### Author: 		Teoman (Ted) Yavuzkurt
-##### Email: 		teoman.david@gmail.com
-##### Description: 	Parses climate data from the HadCRUT3 Record of Global Temperatures
-#####				Converts raw data to GEOJson that can be used with MapBox and QGIS.
+##### Parsing Script converting HADCrut3 Climate Data to GEOJSON
+
+##### AUTHOR: Teoman (Ted) Yavuzkurt
+##### www.github.com/teomandavid
+##### www.teomandavid.com
 
 ##### IMPORTS
 import os, re, sys, time, geojson, argparse, subprocess
 
-##### CONSTANTS -- move to init() func
-START_YEAR = 1990 		# year to start ouputting data
-END_YEAR = 2010			# year to end data output
+##### CONSTANTS
 
+# NOTE: these can be set via command line arguments
+# But these are good defaults (so you can just run python3 parse.py)
+
+# NOTE: climate anomaly data is available from 1850 to 2009
+# So this is a good range.
+START_YEAR = 1850 		# year to start outputting data
+END_YEAR = 2010			# year to end data output (non-inclusive)
 VERBOSE = False			# print extra info to command line
 PRETTY_PRINT = True		# make output pretty
-
 PATH = "./climate-data"	# directory containing climate data set
 OUTPATH = "./output/"	# directory to store output, will be created
-OUTFILE = "climate-filter" 	# will append .json and times if needed
-PRETTY_PRINT = True		# pretty print output
-
+OUTPREFIX = "" 			# filename prefix. Will append .json if needed
+PRETTY_PRINT = True		# pretty print JSON Output
 LIMIT = 25000			# maximum # of stations to parse (>6000 == all of them)
-SPLIT_FILES = False		# output to single file or individual files by years
-SPLIT_PERIOD = 10		# number of years per split
-SPLIT_HEADERS = True	# separate headers from main file data
-SPLIT_LAYERS = False		# separate output into different layers by starting year for data
-SPLIT_POINTS = True
-
 AVERAGE_TEMPS = True	# averages missing data points
-
-MAX_MISSING = 10		# maximum # of missing observations before we drop an observation
+MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
 ##### REGEX -- precompiled for speed
 # Matches fields we want to capture
@@ -44,66 +41,50 @@ reObs = re.compile("Obs:")
 # Matches positive numbers (i.e. names of files) -- prevents matching DS_STORE etc
 reInclude = re.compile("[0-9]+")
 
-##### FUNCTIONS
+##### MAIN CODE
+
+##### I've segmented these into functions
+##### So it's clearer what each part is doing
+
+##### Not adding a lot of comments in this file as it's pretty self explanatory
+
+##### Could've done this with Pandas.
+
 
 # 	init():
 #		Arguments: 		None
 #		Description: 	Parses script arguments and starts parsing
 #						Called on startup
 def init():
-	global LIMIT, SPLIT_FILES, VERBOSE, START_YEAR, END_YEAR, SPLIT_LAYERS, SPLIT_PERIOD
+	global LIMIT, VERBOSE, START_YEAR, END_YEAR
 	parser = argparse.ArgumentParser(description='Parse climate data set into GEOJson.')
-	parser.add_argument('-s', action="store_true", help='Split output into multiple files by year. Default: ' + str(SPLIT_FILES), default=SPLIT_FILES)
 	parser.add_argument('-l', help='Max # of stations to process. (>6000 == all) Default: ' + str(LIMIT), type=int, nargs=1, default=[LIMIT])
 	parser.add_argument('-v', action="store_true", help='Print extra info during parsing. Default: ' + str(VERBOSE), default=VERBOSE)
 	parser.add_argument('-p', help="Period for output. Default: " + str(START_YEAR) + ", " + str(END_YEAR), type=int, nargs=2, default=[START_YEAR, END_YEAR])
 
 	args = parser.parse_args()
-	SPLIT_FILES = vars(args)['s']
 	LIMIT = vars(args)['l'][0]
 	VERBOSE = vars(args)['v']
 	START_YEAR = vars(args)['p'][0]
 	END_YEAR = vars(args)['p'][1]
 
-	if(SPLIT_POINTS):
-		SPLIT_LAYERS = True
-		SPLIT_FILES = False
-		SPLIT_PERIOD = 1
-
 	parseData()
+
 
 # 	parseData():
 #		Arguments: 		None
 #		Description: 	Calls other parsing functions
 def parseData():
-	yearRange = range(END_YEAR, START_YEAR, (SPLIT_PERIOD) * -1) if (SPLIT_FILES or SPLIT_LAYERS) else [None]
 	stations = parseFiles()
 
-	features = []
-	for year in yearRange:
-		period = [year - SPLIT_PERIOD, year] if year else None
-		print("Converting interval " + str(period) + " to GEOJson")
-		features.extend(stationsToFeatures(stations, period));
-		if(SPLIT_FILES):
-			outputJson(features, generateSuffix(period))
-			features = []
+	for month in range(0, 12):
+		print("Parsing month: " + MONTHS[month])
+		features = stationsToFeatures(stations, month)
+		outputJson(features, MONTHS[month])
 
-	# if we've been accumulating the output to this point
-	if(len(features) > 0):
-		outputJson(features, generateSuffix())
-
-	if(SPLIT_HEADERS):
-		features = stationsToFeatures(stations, None, True)
-		outputJson(features, generateSuffix(headersOnly = True))
-
-def generateSuffix(period = None, headersOnly = False):
-	if(period):
-		suffix = str(period[0])
-		if(period[0] != period[1]):
-			suffix = suffix + "-" + str(period[1])
-	else:
-		suffix = "headers" if headersOnly else ""
-	return suffix
+	features = stationsToFeatures(stations, None, True)
+	outputJson(features, "headers")
+	writeTippecanoeCmd()
 
 def parseFiles():
 	filenames = getAllFilenames()
@@ -209,63 +190,45 @@ def interpolate(temps, index):
 	else:
 		return -99
 
-def stationToGeojson(station, period, headersOnly = False):
+def stationToGeojson(station, month, headersOnly = False):
 	# negative Longitude in data is East, in MapBox it's West
 	point = geojson.Point((-1 * station['Long'],station['Lat']))
-	stationProperties = generateProperties(station, period, headersOnly)
-	feature = geojson.Feature(geometry = point, properties=stationProperties) if 'exclude' not in stationProperties else None
+	stationProperties = generateProperties(station, month, headersOnly)
+	feature = geojson.Feature(geometry = point, properties=stationProperties)
 	printv("FEATURE ENCODING COMPLETE, id: %s\t station: %20s\t" % (station['Number'], station['Name']))
 	return feature
 
-def generateProperties(station, period, headersOnly = False):
-	properties = {} if (SPLIT_HEADERS and not headersOnly) else {
-		"id" 		: 	ifelse(station, 'Number', time.clock()),
-		"name" 		: 	ifelse(station, 'Name', ""),
-		"country" 	: 	ifelse(station, 'Country', ""),
-		"elevation"	:	ifelse(station, 'Height', 0.0),
-		"start_year":	ifelse(station, 'Start year', START_YEAR),
-		"end_year"	:	ifelse(station, 'End year', END_YEAR)
-	}
-
+def generateProperties(station, month, headersOnly = False):
 	if(headersOnly):
-		return properties
+		return {
+			"id" 		: 	ifelse(station, 'Number', time.clock()),
+			"name" 		: 	ifelse(station, 'Name', ""),
+			"country" 	: 	ifelse(station, 'Country', ""),
+			"elevation"	:	ifelse(station, 'Height', 0.0),
+			"start_year":	ifelse(station, 'Start year', START_YEAR),
+			"end_year"	:	ifelse(station, 'End year', END_YEAR)
+		}
 
-	properties['start'] = period[0]
+	properties = {}
 
-	# set start and end points to go through temperatures array
-	start = ((period[0] - START_YEAR)*12) if period else 0
-	end = ((period[1] - START_YEAR)*12) if period else len(station['temperatures'])
-
-	# quick fix come back later!
-	if(SPLIT_POINTS):
-		end = start + 1		# only getting one month per point
-
-	missing = 0
-	for i in range(start, end):
-		# how many missing entries we tolerate
-		tempstr = str(i - start) if not SPLIT_POINTS else "temp" # want it to be relative
-		if(station['temperatures'][i] == -99):
+	# month == offset
+	for i in range(0, len(station['temperatures']), 12):
+		tempIndex = i + month
+		if(tempIndex > len(station['temperatures'])):
+			break
+		tempstr = str(i//12)
+		if(station['temperatures'][tempIndex] == -99):
 			if(AVERAGE_TEMPS):
-				station['temperatures'][i] = interpolate(station['temperatures'], i)
+				station['temperatures'][tempIndex] = interpolate(station['temperatures'], tempIndex)
 
-			# check if we were able to interpolate
-			if(station['temperatures'][i] == -99):
-				if(missing < MAX_MISSING):
-					missing = missing + 1
-				else:
-					properties['exclude'] = True
-					break
-
-		properties[tempstr] = station['temperatures'][i]
+		properties[tempstr] = station['temperatures'][tempIndex]
 	return properties
 
-def stationsToFeatures(stations, period = None, headersOnly = False):
+def stationsToFeatures(stations, month, headersOnly = False):
 	features = []
 	for station in stations:
-		geoStation = stationToGeojson(station, period, headersOnly)
-		# do not append if None returned (missing data point)
-		if(geoStation):
-			features.append(geoStation)
+		geoStation = stationToGeojson(station, month, headersOnly)
+		features.append(geoStation)
 	return features
 
 def outputJson(features, suffix = ""):
@@ -273,7 +236,7 @@ def outputJson(features, suffix = ""):
 
 	geoData = geojson.FeatureCollection(features);
 
-	filename = OUTPATH + OUTFILE + str(suffix) + ".json"
+	filename = OUTPATH + OUTPREFIX + str(suffix) + ".json"
 	os.makedirs(os.path.dirname(filename), exist_ok = True)
 
 	extraArgs = {"indent":4, "separators":(',', ': ')} if PRETTY_PRINT else {}

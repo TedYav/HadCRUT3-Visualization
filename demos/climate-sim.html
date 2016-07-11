@@ -1,4 +1,14 @@
 <!DOCTYPE html>
+<!--
+
+climate-sim.html
+HTML file to display HADCrut3 Climate Data using MapboxGL.js
+
+AUTHOR: Teoman (Ted) Yavuzkurt
+www.github.com/teomandavid
+www.teomandavid.com
+
+-->
 <html>
 <head>
     <meta charset='utf-8' />
@@ -23,19 +33,26 @@
 </main>
 
 <footer>
-<div id="map-controls">
-    <div id="map-slider"></div>
-    <select id="map-months"></select>
-    <div id="year" class="map-text"></div>
-    <div id="anomaly" class="map-text"></div>
-    <select id="map-display"></select>
-    Show Anomaly: <input type="checkbox" id="toggleAnomaly" />
-    Loop: <input type="checkbox" id="toggleLoop" />
+<div>
+<div class="map-controls">
+    <span class="map-text-title m2">Year: </span><span id="year" class="map-text m2"></span>
+    <div id="map-slider" class="m2"></div>
+    <select id="map-months" class="m2"></select>
+    <select id="map-display" class="m2"></select>
+    <span class="mini"> Anomaly: </span><input type="checkbox" id="toggle-anomaly" />
+    <span class="mini">Loop:</span> <input type="checkbox" id="toggle-loop" />
 </div>
-<div id="map-buttons">
-  <button id="playpause">Play! :-)</button>
-  <div class="gradient"><span>-20C</span><div id="temp-gradient"></div><span>40C</span></div>
-  <div class="gradient"><span>-1C</span><div id="anomaly-gradient"></div><span>1C</span></div>
+
+<div class="map-controls">
+  <span class="map-text-title m5-top">Anomaly: </span><span id="anomaly" class="map-text m6-top"></span>
+  <button id="playpause" class="m5">Play</button>
+  <div class="gradient-container"><span id="raw-temp-start"></span><div id="temp-gradient" class="gradient">Raw Temperature</div><span id="raw-temp-end"></span></div>
+  <div class="gradient-container"><span id="anomaly-start"></span><div id="anomaly-gradient" class="gradient">Temperature Anomaly</div><span id="anomaly-end"></span></div>
+</div>
+</div>
+
+<div id="author-info">
+<a href="#" id="info-button"><img src="info.png" width="32" height="32" /></a>
 </div>
 </footer>
 
