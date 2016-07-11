@@ -70,7 +70,7 @@ footer{
 }
 
 footer div:first-child{
-  min-width: 800px;
+  min-width: 500px;
   max-width: 900px;
   margin: auto;
 }
@@ -121,18 +121,22 @@ button{
 
 #map-slider{
   max-width: 450px;
-  min-width: 300px;
+  min-width: 150px;
   height: 15px;
   margin-left: 9px;
+  flex-grow: 0.5;
 }
 
 .gradient-container{
   max-width: 470px;
-  min-width: 200px;
+  min-width: 100px;
   display: inline-block;
   height: 22px;
   margin-left: 10px;
   margin-right: 10px;
+  flex-grow: 0.5;
+  display: flex;
+  flex-direction: row;
 }
 
 .gradient-container span{
@@ -144,6 +148,8 @@ button{
 .gradient{
   text-align: center;
   font-weight: bold;
+  flex-grow: 1;
+  overflow: hidden;
 }
 
 #author-info{
@@ -156,7 +162,6 @@ button{
 
 #temp-gradient{
   max-width: 350px;
-  min-width: inherit;
   height: 20px;
   margin: 5px;
   margin-left: 10px;
