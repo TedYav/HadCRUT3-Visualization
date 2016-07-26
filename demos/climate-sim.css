@@ -33,6 +33,10 @@ body {
   margin-top: 6px !important;
 }
 
+.m8-top{
+  margin-top: 8px !important;
+}
+
 .m2{
   margin: 2px;
 }
@@ -70,9 +74,10 @@ footer{
 }
 
 footer div:first-child{
-  min-width: 500px;
+  min-width: 400px;
   max-width: 900px;
   margin: auto;
+  padding-right: 35px;
 }
 
 .map-text{
@@ -93,10 +98,16 @@ footer div:first-child{
 }
 
 .mini{
-  font-size: inherit%;
-  margin-left: 10px;
+  font-size: inherit;
+  margin-left: 5px;
   margin-right: 0px;
   font-weight: bold;
+  display: flex;
+}
+
+input[type="checkbox"]{
+  margin-right: 10px;
+  flex-shrink: 0;
 }
 
 select{
@@ -116,15 +127,18 @@ select{
 
 button{
   height: 20px;
-  width: 75px;
+  max-width: 75px;
+  flex-basis: 1;
+  overflow: hidden;
 }
 
 #map-slider{
-  max-width: 450px;
-  min-width: 150px;
+  max-width: 600px;
+  min-width: 100px;
   height: 15px;
   margin-left: 9px;
-  flex-grow: 0.5;
+  flex-grow: 2.0;
+  flex-basis: 0.2;
 }
 
 .gradient-container{
@@ -140,9 +154,14 @@ button{
 }
 
 .gradient-container span{
-    display: inline-block;
+    display: flex;
     vertical-align: top;
     margin-top: 6px;
+    flex-basis: 1;
+    flex-shrink: 3;
+    max-width: 30px;
+    min-width: 10px;
+    overflow: hidden;
 }
 
 .gradient{
@@ -150,6 +169,10 @@ button{
   font-weight: bold;
   flex-grow: 1;
   overflow: hidden;
+}
+
+#toggle-anomaly{
+  margin-right: 0px;
 }
 
 #author-info{
@@ -177,7 +200,6 @@ button{
 
 #anomaly-gradient{
   max-width: 350px;
-  min-width: inherit;
   height: 20px;
   margin: 5px;
   margin-left: 10px;

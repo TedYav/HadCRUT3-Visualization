@@ -77,7 +77,7 @@ function initSelect(id, source, selected, handler){ source.forEach(function(item
 // loads temperature scales
 function loadTemperatureScales() {var elements = ['#raw-temp-start', '#raw-temp-end', '#anomaly-start', '#anomaly-end']; var temps = [tempRange[0], tempRange[1], anomalyRange[0], anomalyRange[1]]; elements.forEach(function(ele, index){ $(ele).html(temps[index] + "&deg;C"); }); }
 // toggles animation when button is pushed
-function toggleAnimation(){ if(playing) { $('#playpause').text("Play"); window.clearInterval(intervalID);}else { $('#playpause').text("Stop"); intervalID = window.setInterval(function(){ if(currentYear < dataEndYear - 1){ currentYear++; }else if(loop){ currentYear = dataStartYear;} updateMap(); }, animationSpeed); } playing = !playing;}
+function toggleAnimation(){ if(playing) { $('#toggle-loop').attr('disabled', true); $('#playpause').text("Play"); window.clearInterval(intervalID);}else { $('#toggle-loop').attr('disabled', false); $('#playpause').text("Stop"); intervalID = window.setInterval(function(){ if(currentYear < dataEndYear - 1){ currentYear++; }else if(loop){ currentYear = dataStartYear;}else{$('#playpause').click();} updateMap(); }, animationSpeed); } playing = !playing;}
 // shows an alert w/author information
 function showInfo(e){e.preventDefault(); alert("HADCrut3 Climate Simulation by Teoman (Ted) Yavuzkurt.\nhttp://www.github.com/TeomanDavid\nhttp://www.teomandavid.com\n\nSource available on GitHub under MIT license (my portions).\nRaw Data From: http://www.metoffice.gov.uk/research/climate/climate-monitoring/land-and-atmosphere/surface-station-records\n\nPOWERED BY MAPBOXGL: http://www.mapbox.com");}
 
