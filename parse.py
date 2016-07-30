@@ -50,7 +50,6 @@ reInclude = re.compile("[0-9]+")
 
 ##### Could've done this with Pandas.
 
-
 # 	init():
 #		Arguments: 		None
 #		Description: 	Parses script arguments and starts parsing
@@ -84,7 +83,6 @@ def parseData():
 
 	features = stationsToFeatures(stations, None, True)
 	outputJson(features, "headers")
-	writeTippecanoeCmd()
 
 def parseFiles():
 	filenames = getAllFilenames()
@@ -188,6 +186,7 @@ def interpolate(temps, index):
 	if(valid(1) or valid(12)):
 		return avg(1) if valid(1) else avg(12)
 	else:
+	# data points missing for both surrounding months and same month in surrounding years
 		return -99
 
 def stationToGeojson(station, month, headersOnly = False):

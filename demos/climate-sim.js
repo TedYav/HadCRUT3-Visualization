@@ -15,6 +15,10 @@
 // API access code to get the custom style for this project
 mapboxgl.accessToken = 'pk.eyJ1IjoidGVvbWFuZGF2aWQiLCJhIjoiY2lwaHBrNnp4MDE2Z3RsbmpxeWVkbXhxMSJ9.rhKrjQ0Eb8iH0inNPQ7W8Q';
 
+// Actual map style we're going to use. Change this if you want to use a custom style.
+// just ensure layers are named for months in lowercase, with headers in a separate layer called 'headers'
+const mapStyle = 'mapbox://styles/teomandavid/ciqhsdrro002qcfnn41ofo4f2';
+
 // need to declare this before using it, or JQuery will throw an error
 var map;
 
@@ -221,7 +225,7 @@ $(document).ready(function(){
   // instantiate the map with some basic parameters that work well for this data set
   map = new mapboxgl.Map({
       container: 'map',
-      style: 'mapbox://styles/teomandavid/ciqhsdrro002qcfnn41ofo4f2',
+      style: mapStyle,
       zoom: 2,
       minZoom: 2,
       maxZoom: 7,
