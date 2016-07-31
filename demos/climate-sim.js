@@ -390,5 +390,6 @@ $(document).ready(function(){
     $('#info-button').on('click', showInfo);
 
     // and that's it! Not so bad :)
+    
   });
 });
