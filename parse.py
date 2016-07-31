@@ -54,18 +54,40 @@ reInclude = re.compile("[0-9]+")
 #		Arguments: 		None
 #		Description: 	Parses script arguments and starts parsing
 #						Called on startup
+START_YEAR = 1850 		# year to start outputting data
+END_YEAR = 2010			# year to end data output (non-inclusive)
+VERBOSE = False			# print extra info to command line
+PRETTY_PRINT = True		# make output pretty
+PATH = "./climate-data/"	# directory containing climate data set
+OUTPATH = "./output/"		# directory to store output, will be created
+OUTPREFIX = "" 			# filename prefix. Will append .json if needed
+PRETTY_PRINT = True		# pretty print JSON Output
+LIMIT = 25000			# maximum # of stations to parse (>6000 == all of them)
+AVERAGE_TEMPS = True	# averages missing data points
+MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
 def init():
-	global LIMIT, VERBOSE, START_YEAR, END_YEAR
+	global LIMIT, VERBOSE, START_YEAR, END_YEAR, PRETTY_PRINT, OUTPATH, PATH, AVERAGE_TEMPS
 	parser = argparse.ArgumentParser(description='Parse climate data set into GEOJson.')
 	parser.add_argument('-l', help='Max # of stations to process. (>6000 == all) Default: ' + str(LIMIT), type=int, nargs=1, default=[LIMIT])
 	parser.add_argument('-v', action="store_true", help='Print extra info during parsing. Default: ' + str(VERBOSE), default=VERBOSE)
 	parser.add_argument('-p', help="Period for output. Default: " + str(START_YEAR) + ", " + str(END_YEAR), type=int, nargs=2, default=[START_YEAR, END_YEAR])
+	parser.add_argument('-a', action="store_true", help="Average missing data points or not. Default: " + str(AVERAGE_TEMPS), default=AVERAGE_TEMPS)
+	parser.add_argument('-f', action="store_true", help="Format JSON output nicely. Default: " + str(PRETTY_PRINT), default=PRETTY_PRINT)
+	parser.add_argument('-o', help="Directory for output. Default: " + OUTPATH, type=str, default=[OUTPATH], nargs=1)
+	parser.add_argument('-i', help="Directory containing climate data. Default: " + PATH, type=str, default=[PATH], nargs=1)
 
 	args = parser.parse_args()
 	LIMIT = vars(args)['l'][0]
 	VERBOSE = vars(args)['v']
 	START_YEAR = vars(args)['p'][0]
 	END_YEAR = vars(args)['p'][1]
+	AVERAGE_TEMPS = vars(args)['a']
+	PRETTY_PRINT = vars(args)['f']
+	OUTPATH = vars(args)['o'][0]
+	PATH = vars(args)['i'][0]
+
+
 
 	parseData()
 
@@ -234,13 +256,17 @@ def outputJson(features, suffix = ""):
 	print("OUTPUTING JSON DATA")
 
 	geoData = geojson.FeatureCollection(features);
+	printv("GeoJSON FeatureCollection Created")
 
 	filename = OUTPATH + OUTPREFIX + str(suffix) + ".json"
 	os.makedirs(os.path.dirname(filename), exist_ok = True)
-
+	printv("Created Directory for " + filename)
+	
 	extraArgs = {"indent":4, "separators":(',', ': ')} if PRETTY_PRINT else {}
 	rawJson = geojson.dumps(geoData, sort_keys = True, **extraArgs)
 
+	printv("Raw JSON Generated. Writing to file " + filename)
+	
 	with open(filename, 'w') as outfile:
 		outfile.write(rawJson)
 	print("SUCCESSFULLY WROTE JSON FILE: " + filename)
@@ -250,6 +276,6 @@ def outputJson(features, suffix = ""):
 #		Description: 	Prints the arguments if VERBOSE is enabled
 def printv(*args):
     if(VERBOSE):
-        print(args)
+        print(*args)
 
 init()

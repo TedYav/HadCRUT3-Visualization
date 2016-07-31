@@ -1,6 +1,7 @@
 ![Preview](https://raw.githubusercontent.com/TeomanDavid/HadCRUT3-Visualization/master/preview.jpg "Preview")
 
 # HadCRUT3 Climate Change Visualization
+##### Ted Yavuzkurt ([TeomanDavid.com](http://www.teomandavid.com))
 
 This is a visualization of the [HadCRUT3 Global Temperature Record](http://www.metoffice.gov.uk/research/climate/climate-monitoring/land-and-atmosphere/surface-station-records) provided by the [World Meteorological Organization](http://www.wmo.int/pages/index_en.html). This visualization shows both monthly average temperatures and global temperature anomalies (differences from long term mean) from 1850-2010. More than 3000 land temperature stations are visualized.
 
@@ -94,8 +95,48 @@ We load a few scripts, create a div for our map, and then have some rows at the 
 ####1. Constants
 These aren't terribly interesting and are commented in the file if you want to change them. They tell the script when the data set starts, the colors to use, overall map style to use, etc. 
 
+```javascript
+mapboxgl.accessToken = 'pk.eyJ1IjoidGVvbWFuZGF2aWQiLCJhIjoiY2lwaHBrNnp4MDE2Z3RsbmpxeWVkbXhxMSJ9.rhKrjQ0Eb8iH0inNPQ7W8Q';
+const mapStyle = 'mapbox://styles/teomandavid/ciqhsdrro002qcfnn41ofo4f2';
+
+// need to declare this before using it, or JQuery will throw an error
+var map;
+
+const months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+const tempAnomaly = // redacted
+const dataStartYear = 1850;                     // year the data set starts, inclusive
+const dataEndYear = 2010;                       // year the data set ends, not inclusive
+const defaultStyle = 'solid';                   // default display mode for the map ('solid' or 'heatmap')
+const defaultStartYear = 2000;                  // year to start the display
+const defaultStartMonth = months[0];            // month to start the display
+const animationSpeed = 1000;                    // how fast to change years in milliseconds
+const tempRange = [-20, 40];                    // temperature range for raw temperatures
+const tempColors = [[0,0,255], [255,0,0]];      // colors for Raw Temperature Gradient (color 1: [Red, Green, Blue] color2: [Red, Green, Blue])
+const anomalyRange = [-1, 1];                   // temperature range for anomaly temperatures
+const anomalyColors = [[0,0,119], [255,97,0]];  // colors for Anomaly Temp Gradient (color 1: [Red, Green, Blue] color2: [Red, Green, Blue]) 
+const layerNames = months;   
+```
+
 ####2. Global State Variables
-Next I declare some globals to store values like the current year for the visualization, the current selected temperature display style, whether the animation is playing or not, etc. Most of this is uninteresting and commented thoroughly, though one interesting tidbit is this:
+Next I declare some globals to store values like the current year for the visualization, the current selected temperature display style, whether the animation is playing or not, etc. 
+
+```javascript
+var currentYear = defaultStartYear;             // current year for simulation
+var currentMonth = defaultStartMonth;           // current month for simulation
+var currentIndex = currentYear - dataStartYear; // current position in temperatures array (i.e. year offset)
+var currentStyle = defaultStyle;                // current simulation display style ('solid' or 'heatmap')
+
+// display variables
+var defaultWaterColor;                          // default color for water -- loaded dynamically from map on init
+var showAnomaly = false;                        // display anomaly data or not
+
+// animation variables
+var intervalID;                                 // JavaScript intervalID for animation, so it can be cancelled
+var playing = false;                            // animation playing or not
+var loop = false;  
+```
+
+Most of this is uninteresting and commented thoroughly, though one interesting tidbit is this:
 
 ```javascript
 var popup = new mapboxgl.Popup({                // popup object
@@ -110,6 +151,20 @@ If you've played with the live demo for the map, you'll notice the little inform
 
 ####3. Helper Functions
 I declare a few functions to calculate gradient colors and populate form fields with JQuery. Again, not terribly interesting.
+
+```javascript
+function convertColor(colorArray){ return "rgb(" + colorArray[0] + "," + colorArray[1] + "," + colorArray[2] + ")"; }
+// calculates color along a gradient, returns [R,G,B] array
+function colorFromGradient(percent, gradient){ return gradient[0].map(function(color, index){return Math.round((1-percent)*color + percent*gradient[1][index]);}); }
+// initializes select menus
+function initSelect(id, source, selected, handler){ source.forEach(function(item){ var option = $("<option></option>").attr("value",item).text(item); if(item == selected) {option.attr("selected", "selected");} $(id).append(option); }); $(id).on('change', function(){ handler(this.value); }); }
+// loads temperature scales
+function loadTemperatureScales() {var elements = ['#raw-temp-start', '#raw-temp-end', '#anomaly-start', '#anomaly-end']; var temps = [tempRange[0], tempRange[1], anomalyRange[0], anomalyRange[1]]; elements.forEach(function(ele, index){ $(ele).html(temps[index] + "&deg;C"); }); }
+// toggles animation when button is pushed
+function toggleAnimation(){ if(playing) { $('#toggle-loop').attr('disabled', true); $('#playpause').text("Play"); window.clearInterval(intervalID);}else { $('#toggle-loop').attr('disabled', false); $('#playpause').text("Stop"); intervalID = window.setInterval(function(){ if(currentYear < dataEndYear - 1){ currentYear++; }else if(loop){ currentYear = dataStartYear;}else{$('#playpause').click();} updateMap(); }, animationSpeed); } playing = !playing;}
+// shows an alert w/author information
+function showInfo(e){e.preventDefault(); alert("HADCrut3 Climate Simulation by Teoman (Ted) Yavuzkurt.\nhttp://www.github.com/TeomanDavid\nhttp://www.teomandavid.com\n\nSource available on GitHub under MIT license (my portions).\nRaw Data From: http://www.metoffice.gov.uk/research/climate/climate-monitoring/land-and-atmosphere/surface-station-records\n\nPOWERED BY MAPBOXGL: http://www.mapbox.com");}
+```
 
 ####4. Temperature/Header Display Styles
 This is where the code starts to get interesting. I searched for a long time about how to do a good temperature display using Mapbox GL, and I ultimately decided that trying to do a contour map would be too complicated. Instead, I opted to offer two distinct display methods: ```heatmap``` and ```solid```. These are stored in a global object called ```styles``` that contains two functions: ```heatmap``` and ```solid```.
@@ -445,13 +500,25 @@ The parsing script has a few options if you want to mess around on your own. If 
 
 The GeoJSON files will then be in the ```output``` directory.
 
-You can also do the following:
-####Parse Only a Subset
+I've written a few different options to output the data. If you want to see them run:
 
- * Parse only a subset
- * Disable interpolation
- * Output to different format
-* **Recalculate Temperature Anomalies**
+```python3 parse.py --help```
+
+####Recalculate Temperature Anomalies####
+There is a script [available here that will calculate temperature anomalies](http://www.metoffice.gov.uk/media/zip/8/k/gridding_and_averaging_code.zip). If you want to run it yourself quickly, run the following command:
+
+```
+mkdir anomaly && cd ./anomaly && curl http://www.metoffice.gov.uk/media/zip/e/0/station_files.20110720.zip > station_files.zip && unzip -x station_files.zip -d ./station_files && curl http://www.metoffice.gov.uk/media/zip/8/k/gridding_and_averaging_code.zip > grid.zip && unzip -x grid.zip && perl station_gridder.perl | perl make_global_average_ts_ascii.perl > anomaly.txt
+```
+
+Anomaly data is currently stored directly in `climate-sim.js`.
+
 ###Change the Map Style
-If you want to fundamentally change the style of the map, the best way to do it will be in [Mapbox Studio](https://www.mapbox.com/studio/). You will have to run the parsing script again to reupload the data 
-* **Change Visualization Colors or Display**
+If you want to fundamentally change the style of the map, the best way to do it will be in [Mapbox Studio](https://www.mapbox.com/studio/). You will have to run the parsing script again to reupload the data.
+
+[Here is the original style I made](https://api.mapbox.com/styles/v1/teomandavid/ciqhsdrro002qcfnn41ofo4f2.html?title=true&access_token=pk.eyJ1IjoidGVvbWFuZGF2aWQiLCJhIjoiY2lwaHBrNnp4MDE2Z3RsbmpxeWVkbXhxMSJ9.rhKrjQ0Eb8iH0inNPQ7W8Q#2.0001085731437036/36.39815027614806/-12.706191133281237/0) in case you want to see it by itself and edit it.
+
+Make sure you set your layer names to lowercase months (i.e. 'january'), or set the names accordingly in `layerNames` in `climate-sim.js`.
+
+###Change Visualization Colors or Display###
+The best way to do this is to edit `climate-sim.js`. There are a set of constants at the top of the file that control most display options. If you want to dig in further, edit the code and have fun!
