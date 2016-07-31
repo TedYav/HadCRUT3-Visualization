@@ -163,6 +163,21 @@ function updateMap(){
   updatePopup();
 }
 
+// applyStyles(layers, props, style)
+// layers = layers to apply styles to
+// props  = properties to apply ("all" === all properties)
+// style  = style to apply to layers
+// applies styles to layers automatically to avoid lots of repeated API calls
+function applyStyles(layers, props, style){
+  if(style == null){ style = styles[currentStyle](currentIndex); }  // bug fix: safari and some browsers don't support default assignment in arguments
+  if(props === "all"){ props = Object.keys(style);}  // get all the properties from the style if we didn't specify which
+  layers.forEach(function(layer){
+    props.forEach(function(prop){
+      // set the paint property on each layer
+      map.setPaintProperty(layer, prop, style[prop]);
+    });
+  });
+}
 
 // updateAnomaly()
 // redraws temperature anomaly data
@@ -202,21 +217,6 @@ function updateHTML(){
   $('#map-slider').slider("option", "value", currentYear);
 }
 
-// applyStyles(layers, props, style)
-// layers = layers to apply styles to
-// props  = properties to apply ("all" === all properties)
-// style  = style to apply to layers
-// applies styles to layers automatically to avoid lots of repeated API calls
-function applyStyles(layers, props, style){
-  if(style == null){ style = styles[currentStyle](currentIndex); }  // bug fix: safari and some browsers don't support default assignment in arguments
-  if(props === "all"){ props = Object.keys(style);}  // get all the properties from the style if we didn't specify which
-  layers.forEach(function(layer){
-    props.forEach(function(prop){
-      // set the paint property on each layer
-      map.setPaintProperty(layer, prop, style[prop]);
-    });
-  });
-}
 
 // using $(document).ready() ensures we don't try to render the map
 // before the HTML page has completed loading. Otherwise we'll get errors.
