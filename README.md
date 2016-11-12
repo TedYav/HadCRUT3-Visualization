@@ -1,7 +1,7 @@
-![Preview](https://raw.githubusercontent.com/TeomanDavid/HadCRUT3-Visualization/master/preview.jpg "Preview")
+![Preview](https://raw.githubusercontent.com/TedYav/HadCRUT3-Visualization/master/preview.jpg "Preview")
 
 # HadCRUT3 Climate Change Visualization
-##### Ted Yavuzkurt ([TeomanDavid.com](http://www.teomandavid.com))
+##### Ted Yavuzkurt ([TedY.io](http://www.tedy.io))
 
 This is a visualization of the [HadCRUT3 Global Temperature Record](http://www.metoffice.gov.uk/research/climate/climate-monitoring/land-and-atmosphere/surface-station-records) provided by the [World Meteorological Organization](http://www.wmo.int/pages/index_en.html). This visualization shows both monthly average temperatures and global temperature anomalies (differences from long term mean) from 1850-2010. More than 3000 land temperature stations are visualized.
 
@@ -489,7 +489,7 @@ That's all there is to it! Seems like a lot going on, but it's basically pretty 
 ## Running/Modifying the Code
 If you're interested in tinkering around with the visualization, first clone the repo:
 
-```git clone https://github.com/TeomanDavid/HadCRUT3-Visualization && cd ./HadCRUT3-Visualization```
+```git clone https://github.com/TedYav/HadCRUT3-Visualization && cd ./HadCRUT3-Visualization```
 
 There are a few things you can do:
 
