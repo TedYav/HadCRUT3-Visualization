@@ -11,7 +11,7 @@ The visualization is powered by [Mapbox GL](https://www.mapbox.com/blog/mapbox-g
 A friend of mine started working at Mapbox recently and has been singing their praises. When I saw the HadCRUT3 data posted on Reddit(?) I thought it would be a great opportunity to experiment with the API. This was pretty fun to make and the visualization code (```climate-sim.js```) is **heavily** commented to explain how it works.
 
 ## Live Demo
-[A live demo is available here.](https://tedyav.com/demos/climate-vis/index.html)
+[A live demo is available here.](https://tedyav.com/demos/climate-vis/)
 
 ## How it Works
 The raw temperature data is contained in ```climate-data.tar.gz``` and was downloaded from the [UK Met Office](http://www.metoffice.gov.uk/research/climate/climate-monitoring/land-and-atmosphere/surface-station-records). I wrote a simple python script to parse these files (```parse.py```), turning them into [GeoJSON](http://geojson.org/) Feature Collections that could be uploaded to [Mapbox Studio](https://www.mapbox.com/studio/).
